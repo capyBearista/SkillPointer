@@ -1,63 +1,85 @@
 import os
 import shutil
+import time
 from pathlib import Path
 
-# Paths (Configured for OpenCode - Modify if using Claude Code or another agent)
+# ==========================================
+# 🎯 SkillPointer PRO v2.0
+# Infinite Context. Zero Token Tax.
+# ==========================================
+
+class Colors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    CYAN = '\033[96m'
+    GREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+
 agent_config_dir = Path.home() / ".config" / "opencode"
 active_skills_dir = agent_config_dir / "skills"
-
-# This must be totally outside the agent's recursive scanning path!
 hidden_library_dir = Path.home() / ".opencode-skill-libraries"
 
-def main():
-    print("Welcome to SkillPointer Automated Setup 🎯")
-    print("------------------------------------------")
-    
+# Advanced Heuristic Engine for Universal Categorization
+DOMAIN_HEURISTICS = {
+    "security": ["attack", "injection", "vulnerability", "xss", "penetration", "privilege", "fuzzing", "auth", "jwt", "oauth", "bypass", "malware", "forensics", "hacker", "wireshark", "nmap"],
+    "ai-ml": ["ai-", "ml-", "llm", "agent", "gpt", "claude", "gemini", "openai", "anthropic", "prompt", "rag", "diffusion", "huggingface", "pytorch", "tensorflow", "comfy", "flux"],
+    "web-dev": ["angular", "react", "vue", "tailwind", "frontend", "css", "html", "nextjs", "svelte", "astro", "web", "dom", "ui-patterns", "vercel", "shopify"],
+    "backend-dev": ["api", "nestjs", "express", "django", "flask", "fastapi", "spring", "laravel", "node", "graphql", "rest", "grpc", "backend", "server", "microservice"],
+    "devops": ["aws", "azure", "docker", "kubernetes", "ci-cd", "terraform", "ansible", "github-actions", "gitlab", "jenkins", "devops", "cloud", "linux", "ubuntu", "k8s", "bash"],
+    "database": ["sql", "mysql", "postgres", "mongo", "redis", "database", "schema", "prisma", "orm", "nosql", "supabase", "neon"],
+    "design": ["ui", "ux", "design", "figma", "avatar", "background-removal", "svg", "animation", "motion", "framer"],
+    "automation": ["automation", "zapier", "make", "n8n", "selenium", "playwright", "puppeteer", "bot", "workflow", "scraper"],
+    "mobile": ["ios", "android", "react-native", "flutter", "swift", "kotlin", "mobile"],
+    "game-dev": ["game", "unity", "unreal", "godot", "phaser", "3d", "vr", "ar"],
+    "business": ["business", "founder", "sales", "marketing", "seo", "growth", "product", "agile", "scrum", "jira"],
+    "writing": ["writing", "copywriting", "blog", "documentation", "readme", "study", "teardown"]
+}
+
+def print_banner():
+    print(f"\n{Colors.BOLD}{Colors.CYAN}    🎯 SkillPointer PRO v2.0 {Colors.ENDC}")
+    print(f"{Colors.BLUE}    Infinite Context. Zero Token Tax.\n{Colors.ENDC}")
+
+def get_category_for_skill(skill_name: str) -> str:
+    name_lower = skill_name.lower().replace("_", "-")
+    for category, keywords in DOMAIN_HEURISTICS.items():
+        if any(kw in name_lower for kw in keywords):
+            return category
+    return "_uncategorized"
+
+def setup_directories():
     if not active_skills_dir.exists():
-        print(f"Error: Active skills directory not found at {active_skills_dir}")
-        print("Please edit the source code if your agent uses a different path.")
-        return
+        print(f"{Colors.FAIL}✖ Error: OpenCode skills directory not found at {active_skills_dir}{Colors.ENDC}")
+        print(f"{Colors.WARNING}Please ensure OpenCode is installed and configured.{Colors.ENDC}")
+        return False
 
     hidden_library_dir.mkdir(parents=True, exist_ok=True)
+    return True
 
-    # Categories structure (Customize these lists to match your specific skills)
-    categories = {
-        "animation": ["animation", "motion", "transitions", "bounce"],
-        "prompt-engineering": ["prompt", "llm", "ai-engineer", "persona", "reasoning"],
-        "web-dev": ["react", "vue", "angular", "css", "html", "tailwind", "frontend", "web"],
-        "backend-dev": ["node", "express", "django", "python", "api", "graphql", "backend", "go", "rust"],
-        "database": ["sql", "mysql", "postgres", "mongo", "redis", "database", "schema"],
-        "devops": ["docker", "kubernetes", "aws", "deploy", "ci-cd", "github-actions", "devops"],
-        "testing": ["jest", "cypress", "playwright", "test", "qa"],
-        "security": ["security", "auth", "crypto", "oauth"],
-        "game-dev": ["game", "unity", "unreal", "godot", "phaser"],
-        "architecture": ["architecture", "design-pattern", "solid", "clean-code"]
-    }
-
+def migrate_skills():
+    print(f"{Colors.BOLD}📦 Phase 1: Analyzing and Migrating Skills...{Colors.ENDC}\n")
+    
+    category_counts = {}
     moved_count = 0
-    category_counts = {cat: 0 for cat in categories.keys()}
-    category_counts["general-coding"] = 0
-
-    print("Scanning active skills...")
+    pointer_count = 0
+    
     for folder in list(active_skills_dir.iterdir()):
         if not folder.is_dir():
             continue
             
-        # Don't move things we've already generated as pointers
+        # Ignore existing pointers
         if folder.name.endswith("-category-pointer"):
+            pointer_count += 1
             continue
 
-        name_lower = folder.name.lower()
-        
-        # Determine the matched category based on keyword matching
-        matched_category = "general-coding"
-        for cat, keywords in categories.items():
-            if any(kw in name_lower for kw in keywords):
-                matched_category = cat
-                break
-                
-        # Move the skill folder into the hidden library subfolder
-        cat_dir = hidden_library_dir / matched_category
+        # Ignore empty folders
+        if not any(folder.iterdir()):
+            continue
+
+        category = get_category_for_skill(folder.name)
+        cat_dir = hidden_library_dir / category
         cat_dir.mkdir(parents=True, exist_ok=True)
         
         dest = cat_dir / folder.name
@@ -65,13 +87,23 @@ def main():
             shutil.rmtree(dest)
             
         shutil.move(str(folder), str(cat_dir))
-        category_counts[matched_category] += 1
+        
+        category_counts[category] = category_counts.get(category, 0) + 1
         moved_count += 1
+        
+        # Visually print a few for effect, but not all to avoid spam
+        if moved_count <= 5 or moved_count % 50 == 0:
+            print(f"{Colors.GREEN}  ↳ Mapped '{folder.name}' ➔ {category}/{Colors.ENDC}")
 
-    print(f"\nMoved {moved_count} skills into the hidden library folder: {hidden_library_dir}")
+    if moved_count > 5:
+        print(f"{Colors.GREEN}  ...and {moved_count - 5} more skills safely migrated.{Colors.ENDC}")
+        
+    print(f"\n{Colors.BLUE}✔ Successfully migrated {moved_count} raw skills into the hidden vault at {hidden_library_dir}{Colors.ENDC}\n")
+    return category_counts
 
-    # Generate the Pointer Skills
-    # This template is highly optimized for AI consumption. Do not alter the core instructions.
+def generate_pointers(category_counts):
+    print(f"{Colors.BOLD}⚡ Phase 2: Generating Dynamic Category Pointers...{Colors.ENDC}\n")
+    
     pointer_template = """---
 name: {category_name}-category-pointer
 description: Triggers when encountering any task related to {category_name}. This is a pointer to a library of specialized skills.
@@ -83,7 +115,7 @@ You do not have all {category_title} skills loaded immediately in your backgroun
 
 ## Instructions
 1. When you need to perform a task related to {category_name}, you MUST use your file reading tools (like `list_dir` and `view_file` or `read_file`) to browse the hidden library directory: `{library_path}`
-2. Locate the specific Markdown files related to the exact sub-task you need (e.g., if you need to build an API, find the API design skill).
+2. Locate the specific Markdown files related to the exact sub-task you need.
 3. Read the relevant Markdown file(s) into your context.
 4. Follow the specific instructions and best practices found within those files to complete the user's request.
 
@@ -95,11 +127,23 @@ This library contains {count} specialized skills covering various aspects of {ca
 *Reminder: Do not guess best practices or blindly search GitHub. Always consult your local library files first.*
 """
 
-    for cat, count in category_counts.items():
+    created_pointers = 0
+    total_skills_indexed = 0
+    
+    # We will scan the hidden_library_dir completely to ensure we include skills added previously or manually
+    for cat_dir in hidden_library_dir.iterdir():
+        if not cat_dir.is_dir():
+            continue
+            
+        cat = cat_dir.name
+        
+        # Count actual SKILL.md files inside
+        count = sum(1 for p in cat_dir.rglob("SKILL.md"))
         if count == 0:
             continue
             
-        cat_dir = hidden_library_dir / cat
+        total_skills_indexed += count
+        
         pointer_name = f"{cat}-category-pointer"
         pointer_dir = active_skills_dir / pointer_name
         pointer_dir.mkdir(parents=True, exist_ok=True)
@@ -110,17 +154,37 @@ This library contains {count} specialized skills covering various aspects of {ca
             category_name=cat,
             category_title=cat_title,
             count=count,
-            library_path=str(cat_dir)
+            library_path=str(cat_dir.absolute()).replace("\\", "/")  # Ensure cross-platform path format in markdown
         )
         
         with open(pointer_dir / "SKILL.md", "w", encoding="utf-8") as f:
             f.write(content)
             
-        print(f"Created Pointer Skill for Category: {cat} (Points to {count} hidden skills)")
+        created_pointers += 1
+        print(f"{Colors.CYAN}  ⊕ Created {pointer_name} ➔ Indexes {count} skills.{Colors.ENDC}")
 
-    print("\nHierarchical refactoring complete!")
-    print(f"Your active skills directory now only contains generic Pointer Skills instead of massive raw skills.")
-    print("Enjoy your infinite context window! 🚀")
+    print(f"\n{Colors.BLUE}✔ Successfully generated {created_pointers} ultra-lightweight pointers indexing {total_skills_indexed} total skills.{Colors.ENDC}")
+
+def main():
+    print_banner()
+    if not setup_directories():
+        return
+        
+    time.sleep(1)
+    category_counts = migrate_skills()
+    time.sleep(1)
+    generate_pointers(category_counts)
+    
+    print(f"\n{Colors.BOLD}{Colors.GREEN}=========================================={Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.GREEN}✨ Setup Complete! Your AI is now PRO. ✨{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.GREEN}=========================================={Colors.ENDC}")
+    print(f"Your active skills directory now only contains optimized Pointers.")
+    print("When you prompt your AI, its context window will be completely empty, but it will dynamically fetch from your massive library exactly when needed.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(f"\n{Colors.WARNING}Setup cancelled by user.{Colors.ENDC}")
+    except Exception as e:
+        print(f"\n{Colors.FAIL}An unexpected error occurred: {e}{Colors.ENDC}")
