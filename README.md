@@ -32,6 +32,11 @@ If you have 2,000 skills, that requires thousands of tokens just for the AI to "
 
 ## ⚡ The Pointer Solution
 
+<div align="center">
+  <img src="assets/skillpointer-pipeline.svg" alt="SkillPointer Pipeline Architecture" width="100%">
+</div>
+<br>
+
 SkillPointer completely hacks your agent's context model natively by reorganizing your library:
 
 1. **Hidden Vault Storage:** It moves all of your raw skills into an isolated directory (e.g., `~/.opencode-skill-libraries/`). The AI's native startup scanner cannot see them here.
