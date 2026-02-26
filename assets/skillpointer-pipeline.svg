@@ -47,7 +47,7 @@
   <text x="450" y="62" class="t-sub" text-anchor="middle">How your AI agent accesses 2,000+ skills without blowing up its context window</text>
 
   <!-- ═══════════════════════ PHASE 1 ═══════════════════════ -->
-  <text x="40" y="110" class="t-phase">PHASE 1 — YOU ASK A QUESTION</text>
+  <text x="40" y="110" class="t-phase">PHASE 1 - YOU ASK A QUESTION</text>
   <line x1="40" y1="120" x2="860" y2="120" stroke="#334155" stroke-width="1" />
 
   <!-- Stick figure user sitting at desk -->
@@ -85,10 +85,10 @@
 
   <!-- Conveyor belt -->
   <line x1="40" y1="250" x2="860" y2="250" class="belt" />
-  <text x="450" y="270" class="t-label" text-anchor="middle">— conveyor belt of tasks —</text>
+  <text x="450" y="270" class="t-label" text-anchor="middle">- conveyor belt of tasks -</text>
 
   <!-- ═══════════════════════ PHASE 2 ═══════════════════════ -->
-  <text x="40" y="320" class="t-phase">PHASE 2 — THE POINTER DOES ITS THING</text>
+  <text x="40" y="320" class="t-phase">PHASE 2 - THE POINTER DOES ITS THING</text>
   <line x1="40" y1="330" x2="860" y2="330" stroke="#334155" stroke-width="1" />
 
   <!-- Pointer Card (big, prominent) -->
@@ -134,7 +134,7 @@
   <text x="630" y="435" class="t-label" text-anchor="middle" fill="#64748b" font-style="italic">(the AI now knows exactly where to look)</text>
 
   <!-- ═══════════════════════ PHASE 3 ═══════════════════════ -->
-  <text x="40" y="510" class="t-phase">PHASE 3 — GRAB THE SKILL, SHIP THE CODE</text>
+  <text x="40" y="510" class="t-phase">PHASE 3 - GRAB THE SKILL, SHIP THE CODE</text>
   <line x1="40" y1="520" x2="860" y2="520" stroke="#334155" stroke-width="1" />
 
   <!-- The Hidden Vault -->
@@ -182,6 +182,6 @@
   <text x="740" y="660" class="t-label" text-anchor="middle" fill="#4ade80" font-style="italic">secure, tested, production-ready</text>
 
   <!-- Bottom tagline -->
-  <text x="450" y="705" class="t-sub" text-anchor="middle" fill="#64748b">Startup context: ~255 tokens (35 pointers) instead of ~80,000 tokens (2,004 skill descriptions) — 99.7% reduction</text>
+  <text x="450" y="705" class="t-sub" text-anchor="middle" fill="#64748b">Startup context: ~255 tokens (35 pointers) instead of ~80,000 tokens (2,004 skill descriptions) - 99.7% reduction</text>
 
 </svg>
