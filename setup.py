@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 # ==========================================
-# 🎯 SkillPointer PRO v2.0
+# 🎯 SkillPointer
 # Infinite Context. Zero Token Tax.
 # ==========================================
 
@@ -60,7 +60,7 @@ DOMAIN_HEURISTICS = {
 }
 
 def print_banner():
-    print(f"\n{Colors.BOLD}{Colors.CYAN}    🎯 SkillPointer PRO v2.0 {Colors.ENDC}")
+    print(f"\n{Colors.BOLD}{Colors.CYAN}    🎯 SkillPointer {Colors.ENDC}")
     print(f"{Colors.BLUE}    Infinite Context. Zero Token Tax.\n{Colors.ENDC}")
 
 def get_category_for_skill(skill_name: str) -> str:
@@ -197,7 +197,7 @@ def main():
     generate_pointers(category_counts)
     
     print(f"\n{Colors.BOLD}{Colors.GREEN}=========================================={Colors.ENDC}")
-    print(f"{Colors.BOLD}{Colors.GREEN}✨ Setup Complete! Your AI is now PRO. ✨{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.GREEN}✨ Setup Complete! Your AI is now optimized. ✨{Colors.ENDC}")
     print(f"{Colors.BOLD}{Colors.GREEN}=========================================={Colors.ENDC}")
     print(f"Your active skills directory now only contains optimized Pointers.")
     print("When you prompt your AI, its context window will be completely empty, but it will dynamically fetch from your massive library exactly when needed.")
