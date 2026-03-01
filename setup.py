@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 import time
 from pathlib import Path
 
@@ -557,6 +558,10 @@ This library contains {count} specialized skills covering various aspects of {ca
 
 
 def main():
+    # Handle 'install' argument for compatibility with Install.bat/vbs
+    if len(sys.argv) > 1 and sys.argv[1] == "install":
+        pass
+
     print_banner()
     if not setup_directories():
         return
