@@ -447,11 +447,11 @@ def print_banner():
 
 
 def get_category_for_skill(skill_name: str) -> str:
-    # Detectar búsqueda exacta entre comillas
+    # Detect exact search within quotes
     exact_match = False
     if skill_name.startswith('"') and skill_name.endswith('"'):
         exact_match = True
-        name_lower = skill_name[1:-1].lower().replace("_", "-")
+        name_lower = skill_name[1:-1].strip().lower().replace("_", "-").replace(" ", "-")
     else:
         name_lower = skill_name.lower().replace("_", "-")
 
@@ -463,11 +463,11 @@ def get_category_for_skill(skill_name: str) -> str:
 
     for category, keywords in DOMAIN_HEURISTICS.items():
         if exact_match:
-            # Búsqueda exacta: el término completo debe coincidir con uno de los keywords
+            # Exact match: the full term must match one of the keywords
             if name_lower in keywords:
                 return category
         else:
-            # Búsqueda de substring: el término está contenido en algún keyword
+            # Substring match: a known keyword is contained within the term
             if any(kw in name_lower for kw in keywords):
                 return category
     return "_uncategorized"
