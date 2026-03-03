@@ -83,9 +83,22 @@ A zero-dependency Python script that converts your skills directory into a Hiera
 ### Step 1: Run the Setup Script
 Download and run `setup.py`. It automatically categorizes your skills into expert domains (e.g., `ai-ml`, `security`, `frontend`, `automation`) using a keyword heuristic engine.
 
+By default, the script targets OpenCode. You can specify Claude Code using the `--agent` flag:
+
+**For OpenCode:**
 ```bash
 python setup.py
+# Targets: ~/.config/opencode/skills
+# Vault: ~/.opencode-skill-libraries
 ```
+
+**For Claude Code:**
+```bash
+python setup.py --agent claude
+# Targets: ~/.claude/skills
+# Vault: ~/.skillpointer-vault
+```
+*(Note for Claude Code: The `.skillpointer-vault` directory is intentionally prefixed with a dot so Claude's aggressive file scanner natively skips it during Level 1 context hydration).*
 
 ### Step 2: Test It!
 Start your AI agent and ask it to fetch a specific skill:

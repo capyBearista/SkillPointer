@@ -21,9 +21,12 @@ class Colors:
     BOLD = "\033[1m"
 
 
-agent_config_dir = Path.home() / ".config" / "opencode"
-active_skills_dir = agent_config_dir / "skills"
-hidden_library_dir = Path.home() / ".opencode-skill-libraries"
+# Global configuration state
+CONFIG = {
+    "agent_name": "OpenCode",
+    "active_skills_dir": Path.home() / ".config" / "opencode" / "skills",
+    "hidden_library_dir": Path.home() / ".opencode-skill-libraries",
+}
 
 # Advanced Heuristic Engine for Universal Categorization
 DOMAIN_HEURISTICS = {
@@ -474,12 +477,16 @@ def get_category_for_skill(skill_name: str) -> str:
 
 
 def setup_directories():
+    agent_name = CONFIG["agent_name"]
+    active_skills_dir = CONFIG["active_skills_dir"]
+    hidden_library_dir = CONFIG["hidden_library_dir"]
+
     if not active_skills_dir.exists():
         print(
-            f"{Colors.FAIL}✖ Error: OpenCode skills directory not found at {active_skills_dir}{Colors.ENDC}"
+            f"{Colors.FAIL}✖ Error: {agent_name} skills directory not found at {active_skills_dir}{Colors.ENDC}"
         )
         print(
-            f"{Colors.WARNING}Please ensure OpenCode is installed and configured.{Colors.ENDC}"
+            f"{Colors.WARNING}Please ensure {agent_name} is installed and configured.{Colors.ENDC}"
         )
         return False
 
@@ -488,6 +495,9 @@ def setup_directories():
 
 
 def migrate_skills():
+    active_skills_dir = CONFIG["active_skills_dir"]
+    hidden_library_dir = CONFIG["hidden_library_dir"]
+
     print(f"{Colors.BOLD}📦 Phase 1: Analyzing and Migrating Skills...{Colors.ENDC}\n")
 
     category_counts = {}
@@ -538,6 +548,9 @@ def migrate_skills():
 
 
 def generate_pointers(category_counts):
+    active_skills_dir = CONFIG["active_skills_dir"]
+    hidden_library_dir = CONFIG["hidden_library_dir"]
+
     print(
         f"{Colors.BOLD}⚡ Phase 2: Generating Dynamic Category Pointers...{Colors.ENDC}\n"
     )
@@ -611,8 +624,19 @@ This library contains {count} specialized skills covering various aspects of {ca
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="SkillPointer Setup - Infinite Context. Zero Token Tax.")
+    parser.add_argument("--agent", choices=["opencode", "claude"], default="opencode", 
+                        help="Target AI agent (opencode or claude)")
+    args, unknown = parser.parse_known_args()
+
+    if args.agent == "claude":
+        CONFIG["agent_name"] = "Claude Code"
+        CONFIG["active_skills_dir"] = Path.home() / ".claude" / "skills"
+        CONFIG["hidden_library_dir"] = Path.home() / ".skillpointer-vault"
+
     # Handle 'install' argument for compatibility with Install.bat/vbs
-    if len(sys.argv) > 1 and sys.argv[1] == "install":
+    if unknown and unknown[0] == "install":
         pass
 
     print_banner()
