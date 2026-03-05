@@ -10,5 +10,5 @@
             <feComposite in="SourceGraphic" in2="blur" operator="over"/>
         </filter>
     </defs>
-    <path d="M4 12 L10 18 L20 6" fill="none" stroke="url(#iconGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#neonGlow)"/>
+    <path d="M4 12 L10 18 L20 6" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#neonGlow)"/>
 </svg>

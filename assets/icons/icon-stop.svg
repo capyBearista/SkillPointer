@@ -10,5 +10,5 @@
             <feComposite in="SourceGraphic" in2="blur" operator="over"/>
         </filter>
     </defs>
-    <polygon points="9,2 15,2 22,9 22,15 15,22 9,22 2,15 2,9" fill="none" stroke="url(#iconGrad)" stroke-width="2" filter="url(#neonGlow)"/><path d="M12 7 L12 13 M12 17 L12 17.1" stroke="url(#iconGrad)" stroke-width="2" stroke-linecap="round" filter="url(#neonGlow)"/>
+    <polygon points="9,2 15,2 22,9 22,15 15,22 9,22 2,15 2,9" fill="none" stroke="#f43f5e" stroke-width="2" filter="url(#neonGlow)"/><path d="M12 7 L12 13 M12 17 L12 17.1" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" filter="url(#neonGlow)"/>
 </svg>
