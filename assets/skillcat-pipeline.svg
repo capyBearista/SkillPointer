@@ -43,7 +43,7 @@
   <rect width="900" height="720" fill="none" stroke="#1e293b" stroke-width="2" rx="16" />
 
   <!-- Title -->
-  <text x="450" y="42" class="t-title" text-anchor="middle">The SkillPointer Pipeline</text>
+  <text x="450" y="42" class="t-title" text-anchor="middle">The SkillCat Pipeline</text>
   <text x="450" y="62" class="t-sub" text-anchor="middle">How your AI agent accesses 2,000+ skills without blowing up its context window</text>
 
   <!-- ═══════════════════════ PHASE 1 ═══════════════════════ -->

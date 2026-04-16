@@ -41,14 +41,14 @@
   <rect width="900" height="720" rx="16" fill="none" stroke="#1e293b" stroke-width="2" />
 
   <!-- Title -->
-  <text x="450" y="36" class="font-title" text-anchor="middle">WHY SKILLPOINTER WORKS</text>
+  <text x="450" y="36" class="font-title" text-anchor="middle">WHY SKILLCAT WORKS</text>
   <text x="450" y="56" class="font-sub" text-anchor="middle">Real data: 2,004 skills across 34 categories measured from a live environment</text>
 
   <!-- ═══════════════════ CENTER DIVIDER ═══════════════════ -->
   <line x1="450" y1="70" x2="450" y2="475" stroke="#334155" stroke-width="2" stroke-dasharray="6" />
 
   <!-- ═══════════════════ LEFT SIDE: WITHOUT ═══════════════════ -->
-  <text x="225" y="88" class="font-heading" text-anchor="middle" fill="#ef4444">❌  WITHOUT SkillPointer</text>
+  <text x="225" y="88" class="font-heading" text-anchor="middle" fill="#ef4444">❌  WITHOUT SkillCat</text>
   <text x="225" y="104" class="font-label" text-anchor="middle">Agent scans 2,004 skill descriptions at startup</text>
 
   <!-- Box: What Happens -->
@@ -85,7 +85,7 @@
   <text x="40" y="467" class="font-italic">never asked about - on every single conversation</text>
 
   <!-- ═══════════════════ RIGHT SIDE: WITH ═══════════════════ -->
-  <text x="675" y="88" class="font-heading" text-anchor="middle" fill="#38bdf8">✅  WITH SkillPointer</text>
+  <text x="675" y="88" class="font-heading" text-anchor="middle" fill="#38bdf8">✅  WITH SkillCat</text>
   <text x="675" y="104" class="font-label" text-anchor="middle">Agent sees only 35 pointer descriptions at startup</text>
 
   <!-- Box: What Happens -->
@@ -114,7 +114,7 @@
 
   <!-- Result box (right) -->
   <rect x="465" y="370" width="410" height="100" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5" opacity="0.6" />
-  <text x="480" y="390" class="font-sub" fill="#38bdf8">THE WIN WITH SKILLPOINTER</text>
+  <text x="480" y="390" class="font-sub" fill="#38bdf8">THE WIN WITH SKILLCAT</text>
   <text x="480" y="407" class="font-body" fill="#7dd3fc">✦ 255 tokens at startup instead of 80,000 (99.7% reduction)</text>
   <text x="480" y="422" class="font-body" fill="#7dd3fc">✦ AI still accesses all 2,004 skills - via on-demand retrieval</text>
   <text x="480" y="437" class="font-body" fill="#7dd3fc">✦ Works with the agent's native tools - no plugins needed</text>
@@ -170,7 +170,7 @@
     💡  AI agents already use <tspan fill="#38bdf8" font-weight="bold">progressive disclosure</tspan> - they only load Level 1 metadata at startup.
   </text>
   <text x="450" y="660" class="font-body" text-anchor="middle" fill="#cbd5e1">
-    SkillPointer replaces 2,004 Level 1 entries with 35 pointers. Same access to every skill, <tspan fill="#38bdf8" font-weight="bold">99.7% less startup cost</tspan>.
+    SkillCat replaces 2,004 Level 1 entries with 35 pointers. Same access to every skill, <tspan fill="#38bdf8" font-weight="bold">99.7% less startup cost</tspan>.
   </text>
   <text x="450" y="675" class="font-body" text-anchor="middle" fill="#64748b">
     No new tools needed - pointers instruct the AI to use its native list_dir + view_file to retrieve from the hidden vault.

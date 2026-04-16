@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 # ==========================================
-# 🎯 SkillPointer
+# 🎯 SkillCat
 # Infinite Context. Zero Token Tax.
 # ==========================================
 
@@ -445,8 +445,31 @@ DOMAIN_HEURISTICS = {
 
 
 def print_banner():
-    print(f"\n{Colors.BOLD}{Colors.CYAN}    🎯 SkillPointer {Colors.ENDC}")
+    print(f"\n{Colors.BOLD}{Colors.CYAN}    🎯 SkillCat {Colors.ENDC}")
     print(f"{Colors.BLUE}    Infinite Context. Zero Token Tax.\n{Colors.ENDC}")
+
+
+def resolve_claude_vault_path() -> Path:
+    legacy_vault_dir = Path.home() / ".skillpointer-vault"
+    new_vault_dir = Path.home() / ".skillcat-vault"
+
+    if legacy_vault_dir.exists() and not new_vault_dir.exists():
+        print(
+            f"{Colors.WARNING}⚠ Detected legacy vault at {legacy_vault_dir}. Migrating to {new_vault_dir}...{Colors.ENDC}"
+        )
+        try:
+            shutil.move(str(legacy_vault_dir), str(new_vault_dir))
+        except OSError as exc:
+            raise RuntimeError(
+                f"Failed to migrate legacy vault '{legacy_vault_dir}' to '{new_vault_dir}': {exc}"
+            ) from exc
+        print(f"{Colors.GREEN}✔ Legacy vault migration completed.{Colors.ENDC}")
+    elif legacy_vault_dir.exists() and new_vault_dir.exists():
+        print(
+            f"{Colors.WARNING}⚠ Both legacy and new Claude vault paths exist. Using {new_vault_dir} and leaving {legacy_vault_dir} unchanged.{Colors.ENDC}"
+        )
+
+    return new_vault_dir
 
 
 def get_category_for_skill(skill_name: str) -> str:
@@ -625,7 +648,9 @@ This library contains {count} specialized skills covering various aspects of {ca
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="SkillPointer Setup - Infinite Context. Zero Token Tax.")
+    parser = argparse.ArgumentParser(
+        description="SkillCat Setup - Infinite Context. Zero Token Tax."
+    )
     parser.add_argument("--agent", choices=["opencode", "claude"], default="opencode", 
                         help="Target AI agent (opencode or claude)")
     args, unknown = parser.parse_known_args()
@@ -633,7 +658,7 @@ def main():
     if args.agent == "claude":
         CONFIG["agent_name"] = "Claude Code"
         CONFIG["active_skills_dir"] = Path.home() / ".claude" / "skills"
-        CONFIG["hidden_library_dir"] = Path.home() / ".skillpointer-vault"
+        CONFIG["hidden_library_dir"] = resolve_claude_vault_path()
 
     # Handle 'install' argument for compatibility with Install.bat/vbs
     if unknown and unknown[0] == "install":

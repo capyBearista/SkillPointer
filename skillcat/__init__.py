@@ -1,0 +1,1 @@
+"""SkillCat package."""

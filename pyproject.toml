@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skillcat"
+version = "0.1.0"
+description = "SkillCat installer and migrator"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+
+[project.scripts]
+skillcat = "skillcat.cli:main"
+
+[tool.setuptools]
+packages = ["skillcat"]

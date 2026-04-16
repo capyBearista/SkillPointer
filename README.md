@@ -1,19 +1,19 @@
 <div align="center">
-  <img src="assets/skillpointer-architecture.svg" alt="SkillPointer Architecture" width="100%">
+  <img src="assets/skillcat-architecture.svg" alt="SkillCat Architecture" width="100%">
 
-  # SkillPointer <img src="assets/icons/icon-target.svg" width="36" height="36" align="center" alt="Target">
+  # SkillCat <img src="assets/icons/icon-target.svg" width="36" height="36" align="center" alt="Target">
 
   **Infinite AI Context. Zero Token Tax.**
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+  [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
   [![OpenCode Compatible](https://img.shields.io/badge/OpenCode-compatible-38bdf8.svg)](https://opencode.ai)
   [![Claude Code Compatible](https://img.shields.io/badge/Claude%20Code-compatible-38bdf8.svg)](https://docs.anthropic.com/en/docs/claude-code)
 </div>
 
 <br/>
 
-SkillPointer is an **organizational pattern** for AI development agents (OpenCode, Claude Code, and others) that solves a specific scaling problem: when you have hundreds or thousands of skills installed, the startup token cost becomes massive.
+SkillCat is an **organizational pattern** for AI development agents (OpenCode, Claude Code, and others) that solves a specific scaling problem: when you have hundreds or thousands of skills installed, the startup token cost becomes massive.
 
 It works **with** the native skill system, not against it - using skills to optimize skills.
 
@@ -44,7 +44,7 @@ With a large library this adds up fast:
 * **It degrades reasoning** - [research shows](https://arxiv.org/abs/2307.03172) LLMs perform worse with longer contexts ("lost in the middle" problem).
 
 <div align="center">
-  <img src="assets/skillpointer-comparison.svg" alt="SkillPointer Before vs After Comparison" width="100%">
+  <img src="assets/skillcat-comparison.svg" alt="SkillCat Before vs After Comparison" width="100%">
 </div>
 
 ---
@@ -52,11 +52,11 @@ With a large library this adds up fast:
 ## <img src="assets/icons/icon-lightning.svg" width="24" height="24" align="center" alt="Lightning"> The Pointer Solution
 
 <div align="center">
-  <img src="assets/skillpointer-pipeline.svg" alt="SkillPointer Pipeline Architecture" width="100%">
+  <img src="assets/skillcat-pipeline.svg" alt="SkillCat Pipeline Architecture" width="100%">
 </div>
 <br>
 
-SkillPointer works *with* the native skill system by reorganizing your library:
+SkillCat works *with* the native skill system by reorganizing your library:
 
 1. **Hidden Vault Storage:** It moves all raw skills into an isolated directory (`~/.opencode-skill-libraries/`). The agent's startup scanner cannot see them here - so they don't appear in `<available_skills>`.
 2. **Category Pointers:** It replaces 2,000 skills with ~35 lightweight "Pointer Skills" in your active `skills/` directory (e.g., `security-category-pointer`). Each pointer is a native `SKILL.md` that indexes an entire category.
@@ -66,7 +66,7 @@ SkillPointer works *with* the native skill system by reorganizing your library:
 
 These numbers are from a live environment with 2,004 skills across 34 categories:
 
-| Metric | Without SkillPointer | With SkillPointer |
+| Metric | Without SkillCat | With SkillCat |
 |---|---|---|
 | Level 1 entries | 2,004 descriptions | 35 pointer descriptions |
 | **Startup tokens** | **~80,000** | **~255** |
@@ -78,27 +78,46 @@ These numbers are from a live environment with 2,004 skills across 34 categories
 
 ## <img src="assets/icons/icon-rocket.svg" width="24" height="24" align="center" alt="Rocket"> Installation & Setup
 
-A zero-dependency Python script that converts your skills directory into a Hierarchical Pointer Architecture.
+A lightweight Python tool that converts your skills directory into a Hierarchical Pointer Architecture.
 
-### Step 1: Run the Setup Script
-Download and run `setup.py`. It automatically categorizes your skills into expert domains (e.g., `ai-ml`, `security`, `frontend`, `automation`) using a keyword heuristic engine.
+### Step 1: Use the SkillCat CLI
 
-By default, the script targets OpenCode. You can specify Claude Code using the `--agent` flag:
+Primary runtime target:
 
-**For OpenCode:**
 ```bash
-python setup.py
+uvx skillcat
+```
+
+Local development fallback remains available:
+
+```bash
+python -m skillcat
+```
+
+The tool automatically categorizes your skills into expert domains (e.g., `ai-ml`, `security`, `frontend`, `automation`) using a keyword heuristic engine.
+
+By default, the tool targets OpenCode. You can specify Claude Code using the `--agent` flag:
+
+**OpenCode mode:**
+```bash
+uvx skillcat
 # Targets: ~/.config/opencode/skills
 # Vault: ~/.opencode-skill-libraries
 ```
 
-**For Claude Code:**
+**Claude mode:**
 ```bash
-python setup.py --agent claude
+uvx skillcat --agent claude
 # Targets: ~/.claude/skills
-# Vault: ~/.skillpointer-vault
+# Vault: ~/.skillcat-vault
 ```
-*(Note for Claude Code: The `.skillpointer-vault` directory is intentionally prefixed with a dot so Claude's aggressive file scanner natively skips it during Level 1 context hydration).*
+*(Note for Claude Code: The `.skillcat-vault` directory is intentionally prefixed with a dot so Claude's aggressive file scanner natively skips it during Level 1 context hydration).*
+
+### Migration from SkillPointer
+
+- Command migration: use `skillcat`/`uvx skillcat` instead of `skillpointer`.
+- Claude vault migration: legacy `~/.skillpointer-vault` is automatically migrated to `~/.skillcat-vault` when running Claude mode.
+- If both vault paths exist, SkillCat keeps using `~/.skillcat-vault` and leaves the legacy path unchanged for manual review.
 
 ### Step 2: Test It!
 Start your AI agent and ask it to fetch a specific skill:
@@ -114,7 +133,7 @@ Watch the execution logs:
 
 ## <img src="assets/icons/icon-tools.svg" width="24" height="24" align="center" alt="Tools"> Manual Implementation Guide
 
-If you prefer to set this up manually without the `setup.py` script:
+If you prefer to set this up manually without the automated CLI flow:
 
 1. Create a hidden library directory (e.g., `~/.opencode-skill-libraries/animation`)
 2. Place your actual skill folders inside that directory.
@@ -128,9 +147,9 @@ If you prefer to set this up manually without the `setup.py` script:
 <summary><b>"Isn't this just the same as Claude/OpenCode skills?"</b></summary>
 <br>
 
-**Yes - and that's the point.** SkillPointer isn't a plugin, library, or replacement for native skills. It IS native skills, organized in a specific pattern to solve a scaling problem.
+**Yes - and that's the point.** SkillCat isn't a plugin, library, or replacement for native skills. It IS native skills, organized in a specific pattern to solve a scaling problem.
 
-The native skill system works great with 50 skills. With 2,000 skills, Level 1 loading alone consumes ~80K tokens. SkillPointer compresses that from 2,000 entries to 35 category pointers - same access to every skill, 99.7% less startup overhead.
+The native skill system works great with 50 skills. With 2,000 skills, Level 1 loading alone consumes ~80K tokens. SkillCat compresses that from 2,000 entries to 35 category pointers - same access to every skill, 99.7% less startup overhead.
 
 Think of it like this: having 2,000 files in one folder vs. organizing them into 35 labeled folders with an index card on each one. The files are the same - the organization is what matters at scale.
 </details>
@@ -141,7 +160,7 @@ Think of it like this: having 2,000 files in one folder vs. organizing them into
 
 Correct - the **full skill body** (Level 2) loads on-demand. But the **name + description of every skill** (Level 1) still loads at startup. This is documented in the [official OpenCode docs](https://opencode.ai/docs/skills) - agents inject an `<available_skills>` section into the system prompt listing every skill.
 
-With 2,000 skills, that's ~80K tokens just for the index. SkillPointer compresses that index from 2,000 entries to 35.
+With 2,000 skills, that's ~80K tokens just for the index. SkillCat compresses that index from 2,000 entries to 35.
 </details>
 
 <details>
@@ -155,18 +174,18 @@ It's not about capability - it's about efficiency. Every token in `<available_sk
 <summary><b>"How is retrieval different from the native skill tool?"</b></summary>
 <br>
 
-The native `skill()` tool loads a skill the AI already knows about (from Level 1). SkillPointer pointers instruct the AI to use `list_dir` and `view_file` to *discover* skills it doesn't know about yet - browsing the hidden vault to find the exact file. It's a different retrieval path that bypasses the need for all skills to be in Level 1.
+The native `skill()` tool loads a skill the AI already knows about (from Level 1). SkillCat pointers instruct the AI to use `list_dir` and `view_file` to *discover* skills it doesn't know about yet - browsing the hidden vault to find the exact file. It's a different retrieval path that bypasses the need for all skills to be in Level 1.
 </details>
 
 ---
 
 ## <img src="assets/icons/icon-books.svg" width="24" height="24" align="center" alt="Books"> How It Works (Technical Details)
 
-SkillPointer leverages the way AI agents handle skills, as documented by [OpenCode](https://opencode.ai/docs/skills) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills):
+SkillCat leverages the way AI agents handle skills, as documented by [OpenCode](https://opencode.ai/docs/skills) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills):
 
 1. **At startup**, the agent scans all `SKILL.md` files and injects their `name` + `description` into an `<available_skills>` XML block in the system prompt.
-2. **SkillPointer moves** 2,000 raw skill folders to a hidden vault directory outside the scan path.
-3. **SkillPointer creates** 35 category pointer skills in the scan path. Each pointer's `SKILL.md` contains instructions telling the AI to browse the vault using its native file tools.
+2. **SkillCat moves** 2,000 raw skill folders to a hidden vault directory outside the scan path.
+3. **SkillCat creates** 35 category pointer skills in the scan path. Each pointer's `SKILL.md` contains instructions telling the AI to browse the vault using its native file tools.
 4. **At runtime**, the AI matches a pointer, reads its body, follows the instructions, and retrieves exactly the skill it needs from the vault.
 
 No custom tools, no plugins, no API calls. Just smart organization of native skills.
@@ -177,7 +196,7 @@ No custom tools, no plugins, no API calls. Just smart organization of native ski
 <summary><b>View Star History</b></summary>
 <br>
 <div align="center">
-  <img src="https://api.star-history.com/svg?repos=blacksiders/SkillPointer&type=Date" alt="Star History Chart">
+  <img src="https://api.star-history.com/svg?repos=blacksiders/SkillCat&type=Date" alt="Star History Chart">
 </div>
 </details>
 

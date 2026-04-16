@@ -1,16 +1,16 @@
 # AGENTS.md
 
 ## What this repo is
-- This repo is a single-script installer/migrator for SkillPointer; `setup.py` is the source of truth for behavior.
-- There is no test/lint/typecheck pipeline in-repo; verify changes by running `python setup.py` against a safe skills sandbox.
+- This repo is a single-script installer/migrator for SkillCat; `skillcat/installer.py` is the source of truth for behavior.
+- There is no test/lint/typecheck pipeline in-repo; verify changes by running `python -m skillcat` against a safe skills sandbox.
 
 ## Real entrypoints
-- OpenCode mode (default): `python setup.py`
-- Claude mode: `python setup.py --agent claude`
-- Windows wrappers call compatibility mode: `python setup.py install` (`Install.bat`, `Install.vbs`)
+- OpenCode mode (default): `python -m skillcat`
+- Claude mode: `python -m skillcat --agent claude`
+- Windows wrappers call compatibility mode: `python -m skillcat` (`Install.bat`, `Install.vbs`)
 
 ## Safety-critical behavior (easy to miss)
-- `setup.py` is stateful and mutates user directories under `$HOME`; it is not a dry-run tool.
+- `python -m skillcat` is stateful and mutates user directories under `$HOME`; it is not a dry-run tool.
 - If a destination skill folder already exists in the hidden vault, it is deleted via `shutil.rmtree(dest)` before move.
 - Migration skips only:
   - folders ending with `-category-pointer`
@@ -23,15 +23,15 @@
   - hidden vault: `~/.opencode-skill-libraries`
 - Claude paths:
   - active skills: `~/.claude/skills`
-  - hidden vault: `~/.skillpointer-vault`
+  - hidden vault: `~/.skillcat-vault`
 
 ## Categorization and pointer generation
-- Category assignment is heuristic and name-based (`DOMAIN_HEURISTICS` in `setup.py`), with `_uncategorized` fallback.
+- Category assignment is heuristic and name-based (`DOMAIN_HEURISTICS` in `skillcat/installer.py`), with `_uncategorized` fallback.
 - Pointer generation scans the hidden vault recursively for `SKILL.md` and creates one `*-category-pointer/SKILL.md` per non-empty category.
-- Pointer text is generated from the in-script template; keep pointer instructions in sync by editing `pointer_template` in `setup.py`, not by hand-editing generated pointers.
+- Pointer text is generated from the in-script template; keep pointer instructions in sync by editing `pointer_template` in `skillcat/installer.py`, not by hand-editing generated pointers.
 
 ## Editing guidance for future agents
-- Prefer minimal edits in `setup.py`; this script is the product.
+- Prefer minimal edits in `skillcat/installer.py`; this script is the product.
 - If changing category logic, update only `DOMAIN_HEURISTICS` and/or `get_category_for_skill`.
 - If changing user-facing pointer instructions, update `pointer_template` and regenerate pointers; do not patch generated output as source of truth.
 

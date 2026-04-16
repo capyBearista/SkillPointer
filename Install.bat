@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
-python setup.py install
+python -m skillcat
 pause

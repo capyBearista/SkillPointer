@@ -69,12 +69,12 @@
   <circle cx="400" cy="200" r="24" fill="#1e293b" stroke="#334155" stroke-width="2" />
   <text x="400" y="206" class="text-vs" text-anchor="middle">VS</text>
 
-  <!-- RIGHT: SkillPointer (Optimized) -->
+  <!-- RIGHT: SkillCat (Optimized) -->
   <g transform="translate(480, 90)">
     <g class="float-delay">
       <rect width="260" height="220" rx="12" fill="#0f172a" class="glow-blue" />
       
-      <text x="130" y="40" class="text-box-title-blue" text-anchor="middle">SkillPointer Architecture</text>
+      <text x="130" y="40" class="text-box-title-blue" text-anchor="middle">SkillCat Architecture</text>
       
       <text x="130" y="80" class="text-normal" text-anchor="middle">Base Context Window:</text>
       <!-- Tiny Blue Number -->

@@ -1,4 +1,4 @@
 Set WshShell = CreateObject("WScript.Shell")
 WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
-WshShell.Run "python setup.py install", 0, True
-MsgBox "SkillPointer installed successfully!", vbInformation, "Installation Complete"
+WshShell.Run "python -m skillcat", 0, True
+MsgBox "SkillCat installed successfully!", vbInformation, "Installation Complete"
