@@ -1,6 +1,4 @@
-import os
 import shutil
-import sys
 import time
 from pathlib import Path
 
@@ -525,7 +523,6 @@ def migrate_skills():
 
     category_counts = {}
     moved_count = 0
-    pointer_count = 0
 
     for folder in list(active_skills_dir.iterdir()):
         if not folder.is_dir():
@@ -533,7 +530,6 @@ def migrate_skills():
 
         # Ignore existing pointers
         if folder.name.endswith("-category-pointer"):
-            pointer_count += 1
             continue
 
         # Ignore empty folders
@@ -570,7 +566,7 @@ def migrate_skills():
     return category_counts
 
 
-def generate_pointers(category_counts):
+def generate_pointers():
     active_skills_dir = CONFIG["active_skills_dir"]
     hidden_library_dir = CONFIG["hidden_library_dir"]
 
@@ -646,32 +642,24 @@ This library contains {count} specialized skills covering various aspects of {ca
     )
 
 
-def main():
-    import argparse
-    parser = argparse.ArgumentParser(
-        description="SkillCat Setup - Infinite Context. Zero Token Tax."
-    )
-    parser.add_argument("--agent", choices=["opencode", "claude"], default="opencode", 
-                        help="Target AI agent (opencode or claude)")
-    args, unknown = parser.parse_known_args()
-
-    if args.agent == "claude":
+def run_setup(agent: str = "opencode") -> None:
+    if agent == "claude":
         CONFIG["agent_name"] = "Claude Code"
         CONFIG["active_skills_dir"] = Path.home() / ".claude" / "skills"
         CONFIG["hidden_library_dir"] = resolve_claude_vault_path()
-
-    # Handle 'install' argument for compatibility with Install.bat/vbs
-    if unknown and unknown[0] == "install":
-        pass
+    else:
+        CONFIG["agent_name"] = "OpenCode"
+        CONFIG["active_skills_dir"] = Path.home() / ".config" / "opencode" / "skills"
+        CONFIG["hidden_library_dir"] = Path.home() / ".opencode-skill-libraries"
 
     print_banner()
     if not setup_directories():
         return
 
     time.sleep(1)
-    category_counts = migrate_skills()
+    migrate_skills()
     time.sleep(1)
-    generate_pointers(category_counts)
+    generate_pointers()
 
     print(
         f"\n{Colors.BOLD}{Colors.GREEN}=========================================={Colors.ENDC}"
@@ -686,6 +674,21 @@ def main():
     print(
         "When you prompt your AI, its context window will be completely empty, but it will dynamically fetch from your massive library exactly when needed."
     )
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="SkillCat Setup - Infinite Context. Zero Token Tax."
+    )
+    parser.add_argument("--agent", choices=["opencode", "claude"], default="opencode", 
+                        help="Target AI agent (opencode or claude)")
+    args, unknown = parser.parse_known_args()
+
+    # Handle 'install' argument for compatibility with Install.bat/vbs
+    if unknown and unknown[0] == "install":
+        pass
+    run_setup(args.agent)
 
 
 if __name__ == "__main__":

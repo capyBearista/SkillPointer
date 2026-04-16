@@ -6,7 +6,7 @@
   **Infinite AI Context. Zero Token Tax.**
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+  [![Bun Required](https://img.shields.io/badge/Bun-required-f9f1e6.svg)](https://bun.sh)
   [![OpenCode Compatible](https://img.shields.io/badge/OpenCode-compatible-38bdf8.svg)](https://opencode.ai)
   [![Claude Code Compatible](https://img.shields.io/badge/Claude%20Code-compatible-38bdf8.svg)](https://docs.anthropic.com/en/docs/claude-code)
 </div>
@@ -78,44 +78,45 @@ These numbers are from a live environment with 2,004 skills across 34 categories
 
 ## <img src="assets/icons/icon-rocket.svg" width="24" height="24" align="center" alt="Rocket"> Installation & Setup
 
-A lightweight Python tool that converts your skills directory into a Hierarchical Pointer Architecture.
+A full-screen OpenTUI application for SkillCat's guided workflows and future skill operations.
 
 ### Step 1: Use the SkillCat CLI
 
-Primary runtime target:
+Primary runtime targets:
 
 ```bash
-uvx skillcat
+bunx skillcat
+npx skillcat
 ```
 
-Local development fallback remains available:
+For non-interactive or scripted runs, use:
 
 ```bash
-python -m skillcat
+npx --yes skillcat
 ```
 
-The tool automatically categorizes your skills into expert domains (e.g., `ai-ml`, `security`, `frontend`, `automation`) using a keyword heuristic engine.
+SkillCat now uses an OpenTUI runtime with Bun as a hard requirement for interactive mode.
+Install Bun first:
 
-By default, the tool targets OpenCode. You can specify Claude Code using the `--agent` flag:
-
-**OpenCode mode:**
 ```bash
-uvx skillcat
-# Targets: ~/.config/opencode/skills
-# Vault: ~/.opencode-skill-libraries
+curl -fsSL https://bun.sh/install | bash
 ```
 
-**Claude mode:**
+In this Phase B build, the OpenTUI runtime focuses on shell/navigation/theming and polished interaction foundations.
+Mutation-heavy categorization and pointer-generation operations are retained in Python and can be invoked via:
+
 ```bash
-uvx skillcat --agent claude
-# Targets: ~/.claude/skills
-# Vault: ~/.skillcat-vault
+python -m skillcat --run-setup --agent opencode
+python -m skillcat --run-setup --agent claude
 ```
-*(Note for Claude Code: The `.skillcat-vault` directory is intentionally prefixed with a dot so Claude's aggressive file scanner natively skips it during Level 1 context hydration).*
+
+Note: `bunx skillcat` / `npx skillcat` currently run the OpenTUI experience only. Use the Python compatibility launcher for setup execution in this phase.
+
+Deep init/browse/maintain workflow internals continue in subsequent phases.
 
 ### Migration from SkillPointer
 
-- Command migration: use `skillcat`/`uvx skillcat` instead of `skillpointer`.
+- Command migration: use `bunx skillcat` or `npx skillcat` instead of `skillpointer`.
 - Claude vault migration: legacy `~/.skillpointer-vault` is automatically migrated to `~/.skillcat-vault` when running Claude mode.
 - If both vault paths exist, SkillCat keeps using `~/.skillcat-vault` and leaves the legacy path unchanged for manual review.
 

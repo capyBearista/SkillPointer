@@ -1,0 +1,26 @@
+{
+  "name": "skillcat",
+  "version": "0.1.0",
+  "description": "SkillCat OpenTUI runtime",
+  "type": "module",
+  "bin": {
+    "skillcat": "./bin/skillcat.mjs"
+  },
+  "scripts": {
+    "skillcat": "node ./bin/skillcat.mjs",
+    "tui": "bun run ./opentui/src/index.tsx",
+    "tui:dev": "bun --watch run ./opentui/src/index.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentui/core": "latest",
+    "@opentui/react": "latest",
+    "oh-my-logo": "^0.4.0",
+    "react": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.1.0",
+    "typescript": "^5.9.2"
+  }
+}

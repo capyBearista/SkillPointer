@@ -1,16 +1,18 @@
 # AGENTS.md
 
 ## What this repo is
-- This repo is a single-script installer/migrator for SkillCat; `skillcat/installer.py` is the source of truth for behavior.
-- There is no test/lint/typecheck pipeline in-repo; verify changes by running `python -m skillcat` against a safe skills sandbox.
+- This repo now delivers an OpenTUI-first terminal application runtime for SkillCat, with migration core logic retained in `skillcat/installer.py`.
+- There is no CI pipeline in-repo; verify changes with `bunx skillcat` / `npx skillcat` plus targeted sandbox checks.
 
 ## Real entrypoints
-- OpenCode mode (default): `python -m skillcat`
-- Claude mode: `python -m skillcat --agent claude`
-- Windows wrappers call compatibility mode: `python -m skillcat` (`Install.bat`, `Install.vbs`)
+- Interactive runtime: `bunx skillcat` (primary) or `npx skillcat`
+- Python compatibility launcher: `python -m skillcat` (spawns Bun runtime)
+- Python retained setup path: `python -m skillcat --run-setup --agent <opencode|claude>`
+- Windows wrappers launch npm runtime: `npx skillcat` (`Install.bat`, `Install.vbs`)
 
 ## Safety-critical behavior (easy to miss)
-- `python -m skillcat` is stateful and mutates user directories under `$HOME`; it is not a dry-run tool.
+- Interactive launch should not mutate user directories during Phase B.
+- Stateful migration behavior remains in `skillcat/installer.py` and mutates user directories under `$HOME` when explicitly invoked.
 - If a destination skill folder already exists in the hidden vault, it is deleted via `shutil.rmtree(dest)` before move.
 - Migration skips only:
   - folders ending with `-category-pointer`

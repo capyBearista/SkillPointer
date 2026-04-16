@@ -13,5 +13,5 @@ license = "MIT"
 [project.scripts]
 skillcat = "skillcat.cli:main"
 
-[tool.setuptools]
-packages = ["skillcat"]
+[tool.setuptools.packages.find]
+include = ["skillcat*"]
