@@ -5,7 +5,7 @@
 
   **Infinite AI Context. Zero Token Tax.**
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![License: MPL2.0](https://img.shields.io/badge/License-MPL2.0-blue.svg)](https://opensource.org/license/MPL-2.0)
   [![Bun Required](https://img.shields.io/badge/Bun-required-f9f1e6.svg)](https://bun.sh)
   [![OpenCode Compatible](https://img.shields.io/badge/OpenCode-compatible-38bdf8.svg)](https://opencode.ai)
   [![Claude Code Compatible](https://img.shields.io/badge/Claude%20Code-compatible-38bdf8.svg)](https://docs.anthropic.com/en/docs/claude-code)
