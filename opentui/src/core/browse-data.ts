@@ -2,11 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { PathProfile } from "./path-profiles";
+import { deriveTagsWithOptions } from "./tags";
 
 export type BrowseSkill = {
   name: string;
   description: string;
   path: string;
+  tags: string[];
 };
 
 export type BrowseCategory = {
@@ -24,7 +26,7 @@ function toCategoryLabel(name: string): string {
   return name.replace(/-/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-function readSkillDescription(skillFilePath: string): string {
+export function readSkillDescription(skillFilePath: string): string {
   const content = fs.readFileSync(skillFilePath, "utf-8");
   const line = content
     .split("\n")
@@ -57,10 +59,14 @@ function buildCategory(profile: PathProfile, categoryName: string): BrowseCatego
       continue;
     }
 
+    const description = readSkillDescription(skillFile);
     skills.push({
       name: skillEntry.name,
-      description: readSkillDescription(skillFile),
+      description,
       path: skillPath,
+      tags: deriveTagsWithOptions(skillEntry.name, description, {
+        maxTags: 5,
+      }),
     });
   }
 

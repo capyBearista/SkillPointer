@@ -30,6 +30,32 @@ export function buildInitPreviewLines(plan: InitPlan): string[] {
     }
   }
 
+  lines.push("Derived tags (pre-apply):");
+  if (plan.pointerOperations.length === 0) {
+    lines.push("  - No tag preview available.");
+  } else {
+    const seenSkills = new Set<string>();
+    const taggedSkills = plan.pointerOperations
+      .flatMap((pointer) => pointer.skills)
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    for (const skill of taggedSkills) {
+      const key = `${skill.path}:${skill.name}`;
+      if (seenSkills.has(key)) {
+        continue;
+      }
+      seenSkills.add(key);
+      const tags = (skill as { tags?: string[] }).tags;
+      if (Array.isArray(tags) && tags.length > 0) {
+        lines.push(`  - ${skill.name}: ${tags.join(", ")}`);
+      }
+    }
+
+    if (lines[lines.length - 1] === "Derived tags (pre-apply):") {
+      lines.push("  - No tags derived.");
+    }
+  }
+
   const pointers = [...plan.pointerOperations].sort((left, right) => {
     if (left.categoryName !== right.categoryName) {
       return left.categoryName.localeCompare(right.categoryName);

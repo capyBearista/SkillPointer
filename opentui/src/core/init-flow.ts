@@ -30,6 +30,7 @@ function resetSelection(profiles: PathProfile[]): PathSelectionState {
     agents: false,
     opencode: false,
     claude: false,
+    sandbox: false,
   };
 
   for (const profile of profiles) {

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-export const PROFILE_IDS = ["agents", "opencode", "claude"] as const;
+export const PROFILE_IDS = ["agents", "opencode", "claude", "sandbox"] as const;
 
 export type PathProfileId = (typeof PROFILE_IDS)[number];
 
@@ -17,6 +17,8 @@ export type PathSelectionState = Record<PathProfileId, boolean>;
 
 type BuildOptions = {
   homeDir?: string;
+  workspaceRoot?: string;
+  includeSandbox?: boolean;
 };
 
 function resolveHome(homeDir?: string): string {
@@ -25,8 +27,10 @@ function resolveHome(homeDir?: string): string {
 
 export function buildKnownPathProfiles(options: BuildOptions = {}): PathProfile[] {
   const homeDir = resolveHome(options.homeDir);
+  const workspaceRoot = options.workspaceRoot ?? process.cwd();
+  const includeSandbox = options.includeSandbox ?? true;
 
-  return [
+  const profiles: PathProfile[] = [
     {
       id: "agents",
       label: "Agents",
@@ -46,6 +50,17 @@ export function buildKnownPathProfiles(options: BuildOptions = {}): PathProfile[
       vaultDir: path.join(homeDir, ".skillcat-vault"),
     },
   ];
+
+  if (includeSandbox) {
+    profiles.push({
+      id: "sandbox",
+      label: "Local Sandbox",
+      activeDir: path.join(workspaceRoot, ".skill-test", "skills"),
+      vaultDir: path.join(workspaceRoot, ".skill-test-vault"),
+    });
+  }
+
+  return profiles;
 }
 
 export function detectPathProfiles(options: BuildOptions = {}): PathProfile[] {
@@ -57,6 +72,7 @@ export function createInitialPathSelection(profiles: PathProfile[]): PathSelecti
     agents: false,
     opencode: false,
     claude: false,
+    sandbox: false,
   };
 
   for (const profile of profiles) {

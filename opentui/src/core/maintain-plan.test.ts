@@ -140,6 +140,19 @@ test("applyMaintainPlan supports batch skip for destination conflicts", () => {
       fs.existsSync(path.join(fixture.profile.activeDir, "security-category-pointer", "SKILL.md")),
     );
 
+    const securityPointer = plan.pointerOperations.find(
+      (pointer) => pointer.categoryName === "security",
+    );
+    assert.ok(securityPointer);
+    assert.equal((securityPointer?.skills[0]?.tags.length ?? 0) > 0, true);
+
+    const pointerContent = fs.readFileSync(
+      path.join(fixture.profile.activeDir, "security-category-pointer", "SKILL.md"),
+      "utf-8",
+    );
+    assert.match(pointerContent, /## Skills Index/);
+    assert.match(pointerContent, /glob -> grep -> read/);
+
     const conflictId = destinationConflict(plan);
     assert.ok(conflictId.startsWith("destination:"));
   } finally {

@@ -90,6 +90,10 @@ test("buildInitPlan previews pointer outputs for final state after moves", () =>
     const pointer = plan.pointerOperations[0];
     assert.equal(pointer.categoryName, "security");
     assert.equal(pointer.count, 1);
+    assert.equal(pointer.skills.length, 1);
+    assert.equal(pointer.skills[0]?.name, "security-helper");
+    assert.ok(Array.isArray(pointer.skills[0]?.tags));
+    assert.equal((pointer.skills[0]?.tags.length ?? 0) > 0, true);
     assert.equal(
       pointer.pointerPath,
       path.join(workspace.profileA.activeDir, "security-category-pointer", "SKILL.md"),
@@ -138,6 +142,14 @@ test("applyInitPlan applies resolved duplicate and generates pointers", () => {
     assert.ok(fs.existsSync(path.join(workspace.profileB.vaultDir, "security", "security-helper")));
     assert.ok(fs.existsSync(path.join(workspace.profileA.activeDir, "security-category-pointer", "SKILL.md")));
     assert.ok(fs.existsSync(path.join(workspace.profileB.activeDir, "security-category-pointer", "SKILL.md")));
+
+    const pointerContent = fs.readFileSync(
+      path.join(workspace.profileA.activeDir, "security-category-pointer", "SKILL.md"),
+      "utf-8",
+    );
+    assert.match(pointerContent, /## Skills Index/);
+    assert.match(pointerContent, /\*\*security-helper\*\*/);
+    assert.match(pointerContent, /glob -> grep -> read/);
 
     assert.ok(
       fs.existsSync(path.join(workspace.profileA.activeDir, "security-helper")),

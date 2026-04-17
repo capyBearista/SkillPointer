@@ -39,6 +39,14 @@ test("buildInitPreviewLines includes exact category and skill names", () => {
         categoryTitle: "Security",
         count: 1,
         libraryPath: "/tmp/vault/security",
+        skills: [
+          {
+            name: "auth-hardening",
+            description: "An auth hardening skill",
+            path: "/tmp/vault/security/auth-hardening",
+            tags: ["auth", "security"],
+          }
+        ],
       },
     ],
   };
@@ -46,6 +54,8 @@ test("buildInitPreviewLines includes exact category and skill names", () => {
   const lines = buildInitPreviewLines(plan);
   assert.ok(lines.includes("  - [security] skill-a"));
   assert.ok(lines.includes("  - [security] 1 skill(s)"));
+  assert.ok(lines.includes("Derived tags (pre-apply):"));
+  assert.ok(lines.includes("  - auth-hardening: auth, security"));
 });
 
 test("buildInitPreviewLines includes destination conflict transparency", () => {
@@ -91,6 +101,7 @@ test("buildMaintainPreviewLines includes exact move transitions", () => {
         categoryTitle: "Security",
         count: 3,
         libraryPath: "/tmp/vault/security",
+        skills: [],
       },
     ],
   };

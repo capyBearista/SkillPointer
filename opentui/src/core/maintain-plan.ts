@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { getCategoryForSkill } from "./categorization";
 import { buildPointerContent } from "./pointer-template";
+import { readSkillDescription } from "./browse-data";
+import { deriveTagsWithOptions } from "./tags";
 import type { PathProfile } from "./path-profiles";
 
 export type MaintainConflictAction = "skip" | "overwrite" | "abort";
@@ -24,6 +26,7 @@ export type MaintainPointerOperation = {
   categoryTitle: string;
   count: number;
   libraryPath: string;
+  skills: { name: string; description: string; path: string; tags: string[] }[];
 };
 
 export type MaintainConflict = {
@@ -163,6 +166,14 @@ function buildPointerOperations(
         continue;
       }
 
+      const skillsList = Array.from(skills).map(skillName => {
+        const skillPath = path.join(profile.vaultDir, categoryName, skillName);
+        const skillFile = path.join(skillPath, "SKILL.md");
+        const description = fs.existsSync(skillFile) ? readSkillDescription(skillFile) : "No description provided.";
+        const tags = deriveTagsWithOptions(skillName, description, { maxTags: 5 });
+        return { name: skillName, description, path: skillPath, tags };
+      });
+
       pointerOperations.push({
         profileId: profile.id,
         pointerPath: path.join(
@@ -176,6 +187,7 @@ function buildPointerOperations(
         ),
         count: skills.size,
         libraryPath: path.join(profile.vaultDir, categoryName),
+        skills: skillsList,
       });
     }
   }
@@ -299,6 +311,7 @@ function applyPointers(pointerOperations: MaintainPointerOperation[]): number {
       categoryTitle: pointer.categoryTitle,
       count: pointer.count,
       libraryPath: pointer.libraryPath,
+      skills: pointer.skills,
     });
     fs.writeFileSync(pointer.pointerPath, content, "utf-8");
     pointerCount += 1;

@@ -29,6 +29,7 @@ function selectionState(overrides: Partial<PathSelectionState>): PathSelectionSt
     agents: false,
     opencode: false,
     claude: false,
+    sandbox: false,
     ...overrides,
   };
 }

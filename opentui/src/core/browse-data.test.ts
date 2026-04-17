@@ -56,6 +56,8 @@ test("buildBrowseIndex groups by category and exposes name description path", ()
     const skill = securityCategory.skills[0];
     assert.equal(skill.name, "security-helper");
     assert.equal(skill.description, "Harden auth flows");
+    assert.ok(Array.isArray(skill.tags));
+    assert.ok(skill.tags.length >= 1);
     assert.equal(
       skill.path,
       path.join(fixture.profile.vaultDir, "security", "security-helper"),
