@@ -10,7 +10,8 @@
     "skillcat": "node ./bin/skillcat.mjs",
     "tui": "bun run ./opentui/src/index.tsx",
     "tui:dev": "bun --watch run ./opentui/src/index.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"opentui/src/**/*.test.ts\""
   },
   "dependencies": {
     "@opentui/core": "latest",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^19.1.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }
 }
