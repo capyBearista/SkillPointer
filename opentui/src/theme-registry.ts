@@ -109,4 +109,6 @@ export const THEME_REGISTRY: Record<string, ThemePack> = {
   },
 };
 
+export const DEFAULT_THEME_ID = "graphite";
+
 export const THEME_ORDER = ["graphite", "opencode", "warm-cat", "ember-cat"];

@@ -102,17 +102,15 @@ Install Bun first:
 curl -fsSL https://bun.sh/install | bash
 ```
 
-In this Phase B build, the OpenTUI runtime focuses on shell/navigation/theming and polished interaction foundations.
-Mutation-heavy categorization and pointer-generation operations are retained in Python and can be invoked via:
+The OpenTUI runtime now includes guided init, browse, maintain, presets, and stats workflows.
+Compatibility setup/migration operations remain available in Python via:
 
 ```bash
 python -m skillcat --run-setup --agent opencode
 python -m skillcat --run-setup --agent claude
 ```
 
-Note: `bunx skillcat` / `npx skillcat` currently run the OpenTUI experience only. Use the Python compatibility launcher for setup execution in this phase.
-
-Deep init/browse/maintain workflow internals continue in subsequent phases.
+Note: use the Python compatibility launcher when you explicitly need `--run-setup` migration behavior.
 
 ### Migration from SkillPointer
 
@@ -120,7 +118,18 @@ Deep init/browse/maintain workflow internals continue in subsequent phases.
 - Claude vault migration: legacy `~/.skillpointer-vault` is automatically migrated to `~/.skillcat-vault` when running Claude mode.
 - If both vault paths exist, SkillCat keeps using `~/.skillcat-vault` and leaves the legacy path unchanged for manual review.
 
-### Step 2: Test It!
+### Step 2: Validate the Guided TUI
+
+Run an end-to-end dry run in the local sandbox before touching real skill folders:
+
+1. Launch `bunx skillcat` (or `npx skillcat`).
+2. On Home, press `Enter` for guided init.
+3. In Init, select `Local Sandbox`, build preview, review exact move/pointer lines, then apply.
+4. In Maintain, build one combined preview and apply.
+5. In Presets/Stats, confirm `.skillcat-presets.json` and `.skillcat-stats.json` appear in the sandbox vault.
+6. Optional: use Maintain -> Reset local sandbox for repeatable runs.
+
+### Step 3: Test Retrieval with Your Agent
 Start your AI agent and ask it to fetch a specific skill:
 > *"I want to create a CSS button. Please consult your `web-dev-category-pointer` first to find the exact best practice from your library before writing the code."*
 

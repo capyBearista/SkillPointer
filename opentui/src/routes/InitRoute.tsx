@@ -51,6 +51,9 @@ export function InitRoute({
       <text fg={theme.tokens.textMuted}>
         Step: <span fg={theme.tokens.accentStrong}>{initStep}</span>
       </text>
+      <text fg={theme.tokens.textMuted}>
+        Flow: select paths {"->"} preview plan {"->"} resolve duplicates {"->"} confirm apply.
+      </text>
 
       {initStep === "select-paths" ? (
         <>
@@ -85,6 +88,9 @@ export function InitRoute({
               will require conflict resolution.
             </text>
           ) : null}
+          <text fg={theme.tokens.textMuted}>
+            Tip: keep one path selected for the simplest first run.
+          </text>
           <text fg={theme.tokens.success}>
             Enter to build plan, Space to toggle current path.
           </text>
@@ -109,6 +115,9 @@ export function InitRoute({
               </text>
               <text fg={theme.tokens.textMuted}>
                 Destination: {toRelativePath(conflict.destinationPath)}
+              </text>
+              <text fg={theme.tokens.textMuted}>
+                Choose which source path should win for this destination.
               </text>
               {conflict.contenders.map((candidate: string, index: number) => (
                 <text

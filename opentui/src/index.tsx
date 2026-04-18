@@ -2,7 +2,7 @@ import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 
 import { App } from "./app";
-import { buildCatExitCard, renderBigExitBanner } from "./exit-message";
+import { renderBigExitBanner } from "./exit-message";
 import { isRouteName, isSetupFlag, type RouteName } from "./routes";
 
 function resolveRoute(argv: string[]): RouteName {
@@ -39,14 +39,8 @@ async function printFarewellAndExit(exitCode: number): Promise<void> {
   exitPrinted = true;
 
   await renderer.destroy();
-  const catCard = await buildCatExitCard();
-  console.log(`\n${catCard}\n`);
-  const fallbackBanner = await renderBigExitBanner();
-  if (fallbackBanner) {
-    console.log(`\n${fallbackBanner}\n`);
-  } else {
-    console.log("\n  SkillCat signs off with warm paws and clean terminals.\n");
-  }
+  const signoff = await renderBigExitBanner();
+  console.log(`\n${signoff}\n`);
   process.exit(exitCode);
 }
 

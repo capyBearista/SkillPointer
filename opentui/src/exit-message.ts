@@ -1,16 +1,10 @@
+import { getRandomCatSignoff, ROYAL_BLUE_HEX, SKILLCAT_FILLED_STYLE } from "./core/exit-signoff";
+
 type OhMyLogoModule = {
-  render: (
-    text: string,
-    options?: {
-      palette?: string;
-      direction?: "horizontal" | "vertical" | "diagonal";
-      font?: string;
-    },
-  ) => Promise<string>;
   renderFilled: (
     text: string,
     options?: {
-      palette?: string;
+      palette?: string | readonly string[];
       font?:
         | "3d"
         | "block"
@@ -29,50 +23,6 @@ type OhMyLogoModule = {
   ) => Promise<void>;
 };
 
-const FALLBACK_BANNER = String.raw`
-  ____  _  _________    __    ____________
- / __ \/ |/ /  _/ _ \  / /   /  _/ ___/ _ |
-/ /_/ /    // // // / / /__ _/ // /__/ __ |
-\____/_/|_/___/____/ /____//___/\___/_/ |_|
-`;
-
-const FALLBACK_CAT = String.raw`
-+------------------------------------------+
-|   /\_/\                                  |
-|  ( o.o )   Thanks for using SkillCat.    |
-|   > ^ <    See you soon, human.          |
-+------------------------------------------+
-`;
-
-function trimBlock(value: string): string {
-  return value
-    .split("\n")
-    .map((line) => line.replace(/\s+$/g, ""))
-    .join("\n")
-    .trim();
-}
-
-async function renderLogo(
-  text: string,
-  options: {
-    palette: string;
-    direction: "horizontal" | "vertical" | "diagonal";
-    font: string;
-  },
-): Promise<string | null> {
-  try {
-    const module = (await import(
-      "oh-my-logo"
-    )) as unknown as OhMyLogoModule;
-    if (!module?.render) {
-      return null;
-    }
-    return trimBlock(await module.render(text, options));
-  } catch {
-    return null;
-  }
-}
-
 async function loadOhMyLogo(): Promise<OhMyLogoModule | null> {
   try {
     return (await import("oh-my-logo")) as unknown as OhMyLogoModule;
@@ -81,59 +31,26 @@ async function loadOhMyLogo(): Promise<OhMyLogoModule | null> {
   }
 }
 
-function buildCatCard(logo: string | null): string {
-  const logoBlock = logo ? `${logo}\n` : "";
-  return trimBlock(`${logoBlock}${FALLBACK_CAT}\n  - Keep your claws sharp and your context light.`);
+function colorRoyalBlue(value: string): string {
+  return `\u001b[38;2;65;105;225m${value}\u001b[0m`;
 }
 
-function buildBanner(logo: string | null): string {
-  const block = logo ?? trimBlock(FALLBACK_BANNER);
-  return trimBlock(`${block}\n\n  SkillCat signs off with warm paws and clean terminals.`);
-}
-
-export async function renderBigExitBanner(): Promise<string | null> {
+export async function renderBigExitBanner(): Promise<string> {
   const module = await loadOhMyLogo();
-  if (!module?.renderFilled) {
-    return buildBanner(null);
+  const randomSignoff = getRandomCatSignoff();
+
+  if (module?.renderFilled) {
+    try {
+      await module.renderFilled("SKILLCAT", {
+        font: SKILLCAT_FILLED_STYLE.font,
+        letterSpacing: SKILLCAT_FILLED_STYLE.letterSpacing,
+        palette: SKILLCAT_FILLED_STYLE.palette,
+      });
+      return colorRoyalBlue(`  ${randomSignoff}`);
+    } catch {
+      return colorRoyalBlue(`SKILLCAT\n\n  ${randomSignoff}`);
+    }
   }
 
-  try {
-    await module.renderFilled("SKILLCAT", {
-      palette: "sunset",
-      font: "block",
-      letterSpacing: 1,
-    });
-    return null;
-  } catch {
-    return buildBanner(null);
-  }
-}
-
-export async function buildExitMessage(): Promise<string> {
-  const [catCardLogo, bannerLogo] = await Promise.all([
-    renderLogo("SKILLCAT", {
-      palette: "ocean",
-      direction: "horizontal",
-      font: "Standard",
-    }),
-    renderLogo("SKILLCAT", {
-      palette: "sunset",
-      direction: "horizontal",
-      font: "Standard",
-    }),
-  ]);
-
-  const card = buildCatCard(catCardLogo);
-  const banner = buildBanner(bannerLogo);
-
-  return `${card}\n\n${banner}`;
-}
-
-export async function buildCatExitCard(): Promise<string> {
-  const catCardLogo = await renderLogo("SKILLCAT", {
-    palette: "ocean",
-    direction: "horizontal",
-    font: "Standard",
-  });
-  return buildCatCard(catCardLogo);
+  return colorRoyalBlue(`SKILLCAT\n\n  ${randomSignoff}`);
 }

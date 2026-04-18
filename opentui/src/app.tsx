@@ -58,8 +58,10 @@ import {
   applyTabCycle,
   type FocusMode,
 } from "./core/navigation-state";
+import { HOME_CAT_ART } from "./core/home-cat-art";
+import { getInitialThemeIndex, getNextThemeIndex, getThemePack } from "./core/theme-settings";
 import { ROUTES, type RouteName } from "./routes";
-import { THEME_ORDER, THEME_REGISTRY } from "./theme-registry";
+import { THEME_ORDER } from "./theme-registry";
 
 const ROUTE_HOTKEYS: Record<string, RouteName> = {
   i: "init",
@@ -68,21 +70,6 @@ const ROUTE_HOTKEYS: Record<string, RouteName> = {
   p: "presets",
   s: "stats",
 };
-
-const CAT_FRAMES = [
-  String.raw`   /\_/\
-  ( o.o )~
-   > ^ <`,
-  String.raw`   /\_/\
-  ( -.- )~~
-   > ^ <`,
-  String.raw`   /\_/\
-  ( o.o )~~~
-   > ^ <`,
-  String.raw`   /\_/\
-  ( o.o )~~
-   > ^ <`,
-];
 
 const PRESET_SAVE_MODES = ["save-all", "save-selected", "discard"] as const;
 type PresetSaveMode = (typeof PRESET_SAVE_MODES)[number];
@@ -110,6 +97,15 @@ function isEnterKey(keyName: string): boolean {
 const GLOBAL_FOOTER_GROUPS = [
   ["Arrows", "switch page"],
   ["Enter", "focus page"],
+  ["i/b/m/p/s", "jump"],
+  ["Esc", "quit"],
+  ["t", "theme"],
+  ["Mouse", "click page"],
+] as const;
+
+const HOME_GLOBAL_FOOTER_GROUPS = [
+  ["Enter", "start guided init"],
+  ["Arrows", "switch page"],
   ["i/b/m/p/s", "jump"],
   ["Esc", "quit"],
   ["t", "theme"],
@@ -223,12 +219,10 @@ function buildOverrideCountsFromMaintainPlan(plan: MaintainPlan): Record<string,
 }
 
 export function App({ startRoute, onExit }: AppProps) {
-  const [themeIndex, setThemeIndex] = useState(0);
+  const [themeIndex, setThemeIndex] = useState(() => getInitialThemeIndex());
   const [selectedRoute, setSelectedRoute] = useState<RouteName>(startRoute);
   const [activeRoute, setActiveRoute] = useState<RouteName>(startRoute);
   const [focusMode, setFocusMode] = useState<FocusMode>("global");
-  const [catFrameIndex, setCatFrameIndex] = useState(0);
-  const [catBreath, setCatBreath] = useState(0);
   const selectedProfilesRef = useRef<PathProfile[]>([]);
 
   const [profiles, setProfiles] = useState<PathProfile[]>([]);
@@ -309,8 +303,7 @@ export function App({ startRoute, onExit }: AppProps) {
     );
   };
 
-  const themeId = THEME_ORDER[themeIndex] ?? THEME_ORDER[0];
-  const theme = THEME_REGISTRY[themeId];
+  const theme = getThemePack(themeIndex);
   const isSidebarFocused = focusMode === "global";
   const headerSandboxLine = sandboxStatus[0] ?? "Sandbox active: unavailable";
 
@@ -323,19 +316,6 @@ export function App({ startRoute, onExit }: AppProps) {
       `Snapshot: ${toRelativePath(sandboxPaths.snapshotDir)}`,
     ]);
     setProfiles(detectPathProfiles());
-
-    const frameLoop = setInterval(() => {
-      setCatFrameIndex((index) => (index + 1) % CAT_FRAMES.length);
-    }, 360);
-
-    const breathLoop = setInterval(() => {
-      setCatBreath((value) => (value === 0 ? 1 : 0));
-    }, 1200);
-
-    return () => {
-      clearInterval(frameLoop);
-      clearInterval(breathLoop);
-    };
   }, []);
 
   useEffect(() => {
@@ -579,7 +559,7 @@ export function App({ startRoute, onExit }: AppProps) {
     }
 
     if (key.name === "t" && focusMode === "global" && !blockHotkeysForTextEntry) {
-      setThemeIndex((index) => (index + 1) % THEME_ORDER.length);
+      setThemeIndex((index) => getNextThemeIndex(index));
       return;
     }
 
@@ -1168,14 +1148,15 @@ export function App({ startRoute, onExit }: AppProps) {
               borderColor={theme.tokens.accent}
               padding={2}
             >
-              <text fg={theme.tokens.accentStrong} content={catBreath ? " " : ""} />
-              <text fg={theme.tokens.accentStrong} content={CAT_FRAMES[catFrameIndex]} />
+              <text fg={theme.tokens.accentStrong} content={HOME_CAT_ART} />
               <text fg={theme.tokens.text}>
                 <strong>Friendly. Focused. Fast.</strong>
               </text>
               <text fg={theme.tokens.textMuted}>
-                Press <span fg={theme.tokens.accentStrong}>Enter</span> on
-                <span fg={theme.tokens.accentStrong}> INIT</span> to start your guided flow.
+                Press <span fg={theme.tokens.accentStrong}>Enter</span> to start guided init.
+              </text>
+              <text fg={theme.tokens.textMuted}>
+                You will choose paths, preview exact moves and pointers, then confirm apply.
               </text>
               <box
                 border
@@ -1197,7 +1178,7 @@ export function App({ startRoute, onExit }: AppProps) {
                 }}
               >
                 <text fg={theme.tokens.background}>
-                  <strong>Start Guided Init</strong>
+                  <strong>Start Guided Init (Preview First)</strong>
                 </text>
               </box>
             </box>
@@ -1364,7 +1345,9 @@ export function App({ startRoute, onExit }: AppProps) {
         {(() => {
           const footerGroups =
             focusMode === "global"
-              ? GLOBAL_FOOTER_GROUPS
+              ? activeRoute === "home"
+                ? HOME_GLOBAL_FOOTER_GROUPS
+                : GLOBAL_FOOTER_GROUPS
               : activeRoute === "browse"
                 ? [
                     ["Left/Right", "switch pane"],
