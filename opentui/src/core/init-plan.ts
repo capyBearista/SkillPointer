@@ -166,6 +166,32 @@ function readCurrentVaultIndex(profile: PathProfile): SkillCategoryIndex {
   return index;
 }
 
+async function computeSkillsListForCategory(
+  profile: PathProfile,
+  categoryName: string,
+  skillNames: Set<string>
+) {
+  const profileVault = path.resolve(profile.vaultDir);
+  return Promise.all(
+    Array.from(skillNames).map(async (skillName) => {
+      const skillPath = path.join(profileVault, categoryName, skillName);
+      const skillFile = path.join(skillPath, "SKILL.md");
+      const hasFile = await access(skillFile).then(() => true).catch(() => false);
+      const description = hasFile ? readSkillDescription(skillFile) : "No description provided.";
+      const content = hasFile ? await readFile(skillFile, "utf-8") : "";
+
+      const meta = await getOrComputeIntelligence(
+        profile.vaultDir,
+        skillName,
+        description,
+        content
+      );
+      const tags = meta.tags;
+      return { name: skillName, description, path: skillPath, tags };
+    })
+  );
+}
+
 async function gatherPointerOperations(
   profiles: PathProfile[],
   moveOperations: PlannedMoveOperation[],
@@ -204,17 +230,7 @@ async function gatherPointerOperations(
       }
 
       const pointerName = `${categoryName}-category-pointer`;
-      const skillsList = await Promise.all(Array.from(skillNames).map(async skillName => {
-        const skillPath = path.join(profileVault, categoryName, skillName);
-        const skillFile = path.join(skillPath, "SKILL.md");
-        const hasFile = await access(skillFile).then(() => true).catch(() => false);
-        const description = hasFile ? readSkillDescription(skillFile) : "No description provided.";
-        const content = hasFile ? await readFile(skillFile, "utf-8") : "";
-        
-        const meta = await getOrComputeIntelligence(profile.vaultDir, skillName, description, content);
-        const tags = meta.tags;
-        return { name: skillName, description, path: skillPath, tags };
-      }));
+      const skillsList = await computeSkillsListForCategory(profile, categoryName, skillNames);
 
       operations.push({
         profileId: profile.id,
