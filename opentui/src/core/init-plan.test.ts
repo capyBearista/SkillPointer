@@ -60,10 +60,10 @@ function firstDuplicateConflict(plan: InitPlan): string {
   return duplicate.id;
 }
 
-test("buildInitPlan is dry-run and reports duplicate destination conflicts", () => {
+test("buildInitPlan is dry-run and reports duplicate destination conflicts", async () => {
   const workspace = makeWorkspace();
   try {
-    const plan = buildInitPlan({ profiles: [workspace.profileA, workspace.profileB] });
+    const plan = await buildInitPlan({ profiles: [workspace.profileA, workspace.profileB] });
 
     assert.equal(plan.conflicts.length, 1);
     assert.equal(plan.conflicts[0]?.kind, "duplicate-destination");
@@ -79,10 +79,10 @@ test("buildInitPlan is dry-run and reports duplicate destination conflicts", () 
   }
 });
 
-test("buildInitPlan previews pointer outputs for final state after moves", () => {
+test("buildInitPlan previews pointer outputs for final state after moves", async () => {
   const workspace = makeWorkspace();
   try {
-    const plan = buildInitPlan({ profiles: [workspace.profileA] });
+    const plan = await buildInitPlan({ profiles: [workspace.profileA] });
 
     assert.equal(plan.moveOperations.length, 1);
     assert.equal(plan.pointerOperations.length, 1);
@@ -108,14 +108,14 @@ test("buildInitPlan previews pointer outputs for final state after moves", () =>
   }
 });
 
-test("applyInitPlan rejects apply when duplicate conflicts remain unresolved", () => {
+test("applyInitPlan rejects apply when duplicate conflicts remain unresolved", async () => {
   const workspace = makeWorkspace();
   try {
-    const plan = buildInitPlan({ profiles: [workspace.profileA, workspace.profileB] });
+    const plan = await buildInitPlan({ profiles: [workspace.profileA, workspace.profileB] });
 
-    assert.throws(
-      () => {
-        applyInitPlan(plan, { batchConflictAction: "skip" });
+    await assert.rejects(
+      async () => {
+        await applyInitPlan(plan, { batchConflictAction: "skip" });
       },
       /unresolved duplicate/i,
     );
@@ -124,19 +124,19 @@ test("applyInitPlan rejects apply when duplicate conflicts remain unresolved", (
   }
 });
 
-test("applyInitPlan applies resolved duplicate and generates pointers", () => {
+test("applyInitPlan applies resolved duplicate and generates pointers", async () => {
   const workspace = makeWorkspace();
   try {
-    const initialPlan = buildInitPlan({ profiles: [workspace.profileA, workspace.profileB] });
+    const initialPlan = await buildInitPlan({ profiles: [workspace.profileA, workspace.profileB] });
     const duplicateId = firstDuplicateConflict(initialPlan);
 
-    const resolvedPlan = resolveDuplicateConflict(
+    const resolvedPlan = await resolveDuplicateConflict(
       initialPlan,
       duplicateId,
       path.join(workspace.profileB.activeDir, "security-helper"),
     );
 
-    const result = applyInitPlan(resolvedPlan, { batchConflictAction: "skip" });
+    const result = await applyInitPlan(resolvedPlan, { batchConflictAction: "skip" });
 
     assert.equal(result.status, "applied");
     assert.ok(fs.existsSync(path.join(workspace.profileB.vaultDir, "security", "security-helper")));
@@ -161,18 +161,18 @@ test("applyInitPlan applies resolved duplicate and generates pointers", () => {
   }
 });
 
-test("applyInitPlan abort policy exits before mutation when destination conflict exists", () => {
+test("applyInitPlan abort policy exits before mutation when destination conflict exists", async () => {
   const workspace = makeWorkspace();
   try {
     const destination = path.join(workspace.profileA.vaultDir, "security", "security-helper");
     fs.mkdirSync(destination, { recursive: true });
     fs.writeFileSync(path.join(destination, "SKILL.md"), "---\nname: existing\n---\n");
 
-    const plan = buildInitPlan({ profiles: [workspace.profileA] });
+    const plan = await buildInitPlan({ profiles: [workspace.profileA] });
     assert.equal(plan.conflicts.length, 1);
     assert.equal(plan.conflicts[0]?.kind, "destination-exists");
 
-    const result = applyInitPlan(plan, { batchConflictAction: "abort" });
+    const result = await applyInitPlan(plan, { batchConflictAction: "abort" });
     assert.equal(result.status, "aborted");
     assert.equal(result.movedCount, 0);
     assert.equal(result.pointerCount, 0);
@@ -184,15 +184,15 @@ test("applyInitPlan abort policy exits before mutation when destination conflict
   }
 });
 
-test("applyInitPlan removes stale pointer folders during pointer regeneration", () => {
+test("applyInitPlan removes stale pointer folders during pointer regeneration", async () => {
   const workspace = makeWorkspace();
   try {
     const stalePointer = path.join(workspace.profileA.activeDir, "stale-category-pointer");
     fs.mkdirSync(stalePointer, { recursive: true });
     fs.writeFileSync(path.join(stalePointer, "SKILL.md"), "stale");
 
-    const plan = buildInitPlan({ profiles: [workspace.profileA] });
-    const result = applyInitPlan(plan, { batchConflictAction: "skip" });
+    const plan = await buildInitPlan({ profiles: [workspace.profileA] });
+    const result = await applyInitPlan(plan, { batchConflictAction: "skip" });
     assert.equal(result.status, "applied");
 
     assert.ok(!fs.existsSync(stalePointer));
@@ -204,7 +204,7 @@ test("applyInitPlan removes stale pointer folders during pointer regeneration", 
   }
 });
 
-test("buildInitPlan deduplicates planning for shared vault profiles", () => {
+test("buildInitPlan deduplicates planning for shared vault profiles", async () => {
   const workspace = makeWorkspace();
   try {
     const profileA: PathProfile = {
@@ -218,12 +218,12 @@ test("buildInitPlan deduplicates planning for shared vault profiles", () => {
       vaultDir: workspace.profileA.vaultDir,
     };
 
-    const plan = buildInitPlan({ profiles: [profileA, profileB] });
+    const plan = await buildInitPlan({ profiles: [profileA, profileB] });
     assert.equal(plan.conflicts.length, 1);
     assert.equal(plan.moveOperations.length, 0);
 
     const duplicateId = firstDuplicateConflict(plan);
-    const resolved = resolveDuplicateConflict(
+    const resolved = await resolveDuplicateConflict(
       plan,
       duplicateId,
       path.join(profileA.activeDir, "security-helper"),

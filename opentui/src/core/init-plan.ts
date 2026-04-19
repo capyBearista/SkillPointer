@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { getCategoryForSkill } from "./categorization";
+import { getOrComputeIntelligence } from "./intelligence/cache.js";
 import { buildPointerContent } from "./pointer-template";
 import { readSkillDescription } from "./browse-data";
 import { deriveTagsWithOptions } from "./tags";
@@ -164,10 +165,10 @@ function readCurrentVaultIndex(profile: PathProfile): SkillCategoryIndex {
   return index;
 }
 
-function gatherPointerOperations(
+async function gatherPointerOperations(
   profiles: PathProfile[],
   moveOperations: PlannedMoveOperation[],
-): PlannedPointerOperation[] {
+): Promise<PlannedPointerOperation[]> {
   const operations: PlannedPointerOperation[] = [];
   const profileById = new Map<string, PathProfile>();
 
@@ -202,13 +203,16 @@ function gatherPointerOperations(
       }
 
       const pointerName = `${categoryName}-category-pointer`;
-      const skillsList = Array.from(skillNames).map(skillName => {
+      const skillsList = await Promise.all(Array.from(skillNames).map(async skillName => {
         const skillPath = path.join(profileVault, categoryName, skillName);
         const skillFile = path.join(skillPath, "SKILL.md");
         const description = fs.existsSync(skillFile) ? readSkillDescription(skillFile) : "No description provided.";
-        const tags = deriveTagsWithOptions(skillName, description, { maxTags: 5 });
+        const content = fs.existsSync(skillFile) ? fs.readFileSync(skillFile, "utf-8") : "";
+        
+        const meta = await getOrComputeIntelligence(profile.vaultDir, skillName, description, content);
+        const tags = meta.tags;
         return { name: skillName, description, path: skillPath, tags };
-      });
+      }));
 
       operations.push({
         profileId: profile.id,
@@ -236,7 +240,7 @@ function gatherPointerOperations(
   return operations;
 }
 
-export function buildInitPlan(options: BuildInitPlanOptions): InitPlan {
+export async function buildInitPlan(options: BuildInitPlanOptions): Promise<InitPlan> {
   const rawSkills: SkillFolder[] = [];
   for (const profile of options.profiles) {
     rawSkills.push(...listEligibleSkills(profile));
@@ -289,7 +293,7 @@ export function buildInitPlan(options: BuildInitPlanOptions): InitPlan {
     }
   }
 
-  const pointerOperations = gatherPointerOperations(options.profiles, moveOperations);
+  const pointerOperations = await gatherPointerOperations(options.profiles, moveOperations);
 
   const summary: InitPlanSummary = {
     sourceProfiles: options.profiles.length,
@@ -326,11 +330,11 @@ function moveForSource(
   };
 }
 
-export function resolveDuplicateConflict(
+export async function resolveDuplicateConflict(
   plan: InitPlan,
   conflictId: string,
   selectedSourcePath: string,
-): InitPlan {
+): Promise<InitPlan> {
   const conflict = plan.conflicts.find(
     (candidate): candidate is DuplicateDestinationConflict =>
       candidate.kind === "duplicate-destination" && candidate.id === conflictId,
@@ -381,7 +385,7 @@ export function resolveDuplicateConflict(
     });
   }
 
-  const pointerOperations = gatherPointerOperations(plan.profiles, mergedOperations);
+  const pointerOperations = await gatherPointerOperations(plan.profiles, mergedOperations);
 
   return {
     ...plan,
@@ -495,10 +499,10 @@ function applyPointers(pointerOperations: PlannedPointerOperation[]): number {
   return pointerCount;
 }
 
-export function applyInitPlan(
+export async function applyInitPlan(
   plan: InitPlan,
   options: ApplyInitPlanOptions,
-): ApplyInitPlanResult {
+): Promise<ApplyInitPlanResult> {
   assertNoUnresolvedDuplicates(plan);
 
   if (options.batchConflictAction === "abort") {
@@ -538,7 +542,7 @@ export function applyInitPlan(
     movedCount += 1;
   }
 
-  const finalPointerOperations = gatherPointerOperations(plan.profiles, []);
+  const finalPointerOperations = await gatherPointerOperations(plan.profiles, []);
   cleanupStalePointers(plan.profiles, finalPointerOperations);
   const pointerCount = applyPointers(finalPointerOperations);
 

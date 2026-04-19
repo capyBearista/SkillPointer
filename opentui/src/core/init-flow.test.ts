@@ -34,7 +34,7 @@ function selectionState(overrides: Partial<PathSelectionState>): PathSelectionSt
   };
 }
 
-test("home enter transitions to init select-paths and page focus", () => {
+test("home enter transitions to init select-paths and page focus", async () => {
   const selected = [PROFILES[1]!];
   const result = onHomeEnter(PROFILES, selected, selectionState({ agents: true }));
 
@@ -45,16 +45,16 @@ test("home enter transitions to init select-paths and page focus", () => {
   assert.deepEqual(result.nextSelection, selectionState({ opencode: true }));
 });
 
-test("init enter with no selected path moves to result with guidance", () => {
-  const result = onInitSelectPathsEnter(PROFILES, selectionState({}));
+test("init enter with no selected path moves to result with guidance", async () => {
+  const result = await onInitSelectPathsEnter(PROFILES, selectionState({}));
 
   assert.equal(result.nextStep, "result");
   assert.equal(result.resultLines[0], "Select at least one source path before continuing.");
   assert.equal(result.plan, null);
 });
 
-test("init enter with selected path builds plan and advances", () => {
-  const result = onInitSelectPathsEnter(PROFILES, selectionState({ agents: true }));
+test("init enter with selected path builds plan and advances", async () => {
+  const result = await onInitSelectPathsEnter(PROFILES, selectionState({ agents: true }));
 
   assert.ok(result.plan, "expected plan to be generated");
   assert.equal(result.nextStep === "resolve-duplicates" || result.nextStep === "ready", true);
@@ -62,7 +62,7 @@ test("init enter with selected path builds plan and advances", () => {
   assert.equal(result.duplicateChoiceCursor, 0);
 });
 
-test("buildPlanState advances to resolve-duplicates when unresolved duplicates exist", () => {
+test("buildPlanState advances to resolve-duplicates when unresolved duplicates exist", async () => {
   const step = buildPlanState({
     conflicts: [{ kind: "duplicate-destination" }],
   });
@@ -70,7 +70,7 @@ test("buildPlanState advances to resolve-duplicates when unresolved duplicates e
   assert.equal(step, "resolve-duplicates");
 });
 
-test("buildPlanState advances to ready when no duplicate conflicts exist", () => {
+test("buildPlanState advances to ready when no duplicate conflicts exist", async () => {
   const step: InitStep = buildPlanState({ conflicts: [] });
   assert.equal(step, "ready");
 });

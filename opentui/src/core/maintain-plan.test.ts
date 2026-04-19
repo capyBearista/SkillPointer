@@ -78,10 +78,10 @@ function destinationConflict(plan: MaintainPlan): string {
   return conflict.id;
 }
 
-test("buildMaintainPlan respects toggleable actions in one plan", () => {
+test("buildMaintainPlan respects toggleable actions in one plan", async () => {
   const fixture = createFixture();
   try {
-    const plan = buildMaintainPlan({
+    const plan = await buildMaintainPlan({
       profiles: [fixture.profile],
       actions: {
         recategorize: false,
@@ -96,10 +96,10 @@ test("buildMaintainPlan respects toggleable actions in one plan", () => {
   }
 });
 
-test("buildMaintainPlan creates preview-only recategorize move with destination conflict", () => {
+test("buildMaintainPlan creates preview-only recategorize move with destination conflict", async () => {
   const fixture = createFixture();
   try {
-    const plan = buildMaintainPlan({
+    const plan = await buildMaintainPlan({
       profiles: [fixture.profile],
       actions: {
         recategorize: true,
@@ -120,10 +120,10 @@ test("buildMaintainPlan creates preview-only recategorize move with destination 
   }
 });
 
-test("applyMaintainPlan supports batch skip for destination conflicts", () => {
+test("applyMaintainPlan supports batch skip for destination conflicts", async () => {
   const fixture = createFixture();
   try {
-    const plan = buildMaintainPlan({
+    const plan = await buildMaintainPlan({
       profiles: [fixture.profile],
       actions: {
         recategorize: true,
@@ -131,7 +131,7 @@ test("applyMaintainPlan supports batch skip for destination conflicts", () => {
       },
     });
 
-    const result = applyMaintainPlan(plan, { batchConflictAction: "skip" });
+    const result = await applyMaintainPlan(plan, { batchConflictAction: "skip" });
 
     assert.equal(result.status, "applied");
     assert.equal(result.movedCount, 0);
@@ -160,7 +160,7 @@ test("applyMaintainPlan supports batch skip for destination conflicts", () => {
   }
 });
 
-test("buildMaintainPlan keeps pointer previews scoped per profile", () => {
+test("buildMaintainPlan keeps pointer previews scoped per profile", async () => {
   const fixtureA = createFixture();
   const fixtureB = createFixture();
   try {
@@ -168,7 +168,7 @@ test("buildMaintainPlan keeps pointer previews scoped per profile", () => {
     fs.mkdirSync(extraSkillDir, { recursive: true });
     fs.writeFileSync(path.join(extraSkillDir, "SKILL.md"), "---\nname: ts-helper\n---\n");
 
-    const plan = buildMaintainPlan({
+    const plan = await buildMaintainPlan({
       profiles: [fixtureA.profile, fixtureB.profile],
       actions: {
         recategorize: false,
@@ -194,13 +194,13 @@ test("buildMaintainPlan keeps pointer previews scoped per profile", () => {
   }
 });
 
-test("buildMaintainPlan deduplicates recategorize moves for shared vault profiles", () => {
+test("buildMaintainPlan deduplicates recategorize moves for shared vault profiles", async () => {
   const fixture = createFixture();
   const sharedA = createFixtureWithSharedVault(fixture.profile.vaultDir, "agents");
   const sharedB = createFixtureWithSharedVault(fixture.profile.vaultDir, "claude");
 
   try {
-    const plan = buildMaintainPlan({
+    const plan = await buildMaintainPlan({
       profiles: [sharedA.profile, sharedB.profile],
       actions: {
         recategorize: true,
@@ -218,10 +218,10 @@ test("buildMaintainPlan deduplicates recategorize moves for shared vault profile
   }
 });
 
-test("applyMaintainPlan abort policy exits before mutation when conflicts exist", () => {
+test("applyMaintainPlan abort policy exits before mutation when conflicts exist", async () => {
   const fixture = createFixture();
   try {
-    const plan = buildMaintainPlan({
+    const plan = await buildMaintainPlan({
       profiles: [fixture.profile],
       actions: {
         recategorize: true,
@@ -229,7 +229,7 @@ test("applyMaintainPlan abort policy exits before mutation when conflicts exist"
       },
     });
 
-    const result = applyMaintainPlan(plan, { batchConflictAction: "abort" });
+    const result = await applyMaintainPlan(plan, { batchConflictAction: "abort" });
     assert.equal(result.status, "aborted");
     assert.equal(result.movedCount, 0);
     assert.equal(result.pointerCount, 0);
@@ -240,21 +240,21 @@ test("applyMaintainPlan abort policy exits before mutation when conflicts exist"
   }
 });
 
-test("applyMaintainPlan removes stale pointer folders during regeneration", () => {
+test("applyMaintainPlan removes stale pointer folders during regeneration", async () => {
   const fixture = createFixture();
   try {
     const stalePointerDir = path.join(fixture.profile.activeDir, "orphan-category-pointer");
     fs.mkdirSync(stalePointerDir, { recursive: true });
     fs.writeFileSync(path.join(stalePointerDir, "SKILL.md"), "orphan\n");
 
-    const plan = buildMaintainPlan({
+    const plan = await buildMaintainPlan({
       profiles: [fixture.profile],
       actions: {
         recategorize: false,
         regeneratePointers: true,
       },
     });
-    const result = applyMaintainPlan(plan, { batchConflictAction: "skip" });
+    const result = await applyMaintainPlan(plan, { batchConflictAction: "skip" });
 
     assert.equal(result.status, "applied");
     assert.ok(!fs.existsSync(stalePointerDir));

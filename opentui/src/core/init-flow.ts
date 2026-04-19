@@ -71,10 +71,10 @@ export function onHomeEnter(
   };
 }
 
-export function onInitSelectPathsEnter(
+export async function onInitSelectPathsEnter(
   profiles: PathProfile[],
   selection: PathSelectionState,
-): InitSelectEnterTransition {
+): Promise<InitSelectEnterTransition> {
   const selected = getSelectedProfiles(profiles, selection);
   if (selected.length === 0) {
     return {
@@ -86,7 +86,7 @@ export function onInitSelectPathsEnter(
     };
   }
 
-  const plan = buildInitPlan({ profiles: selected });
+  const plan = await buildInitPlan({ profiles: selected });
   return {
     nextStep: buildPlanState(plan),
     resultLines: [],

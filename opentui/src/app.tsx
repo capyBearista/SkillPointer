@@ -449,14 +449,14 @@ export function App({ startRoute, onExit }: AppProps) {
     setProfiles(detectPathProfiles());
   };
 
-  const executeInitApply = () => {
+  const executeInitApply = async () => {
     if (!initPlan) {
       return;
     }
 
     try {
       const currentPlan = initPlan;
-      const result = applyInitPlan(initPlan, { batchConflictAction: batchAction });
+      const result = await applyInitPlan(initPlan, { batchConflictAction: batchAction });
       if (result.status === "aborted") {
         setInitResult([
           "Init apply aborted by selected conflict policy.",
@@ -495,9 +495,9 @@ export function App({ startRoute, onExit }: AppProps) {
     }
   };
 
-  const buildMaintainPreview = () => {
+  const buildMaintainPreview = async () => {
     const selected = selectedProfiles.length > 0 ? selectedProfiles : profiles;
-    const nextPlan = buildMaintainPlan({
+    const nextPlan = await buildMaintainPlan({
       profiles: selected,
       actions: maintainActions,
     });
@@ -505,7 +505,7 @@ export function App({ startRoute, onExit }: AppProps) {
     setMaintainPreviewLines(buildMaintainPreviewLines(nextPlan));
   };
 
-  const executeMaintainApply = () => {
+  const executeMaintainApply = async () => {
     if (!maintainPlan) {
       setMaintainResult(["Build a maintain preview before apply."]);
       return;
@@ -513,7 +513,7 @@ export function App({ startRoute, onExit }: AppProps) {
 
     try {
       const currentPlan = maintainPlan;
-      const result = applyMaintainPlan(maintainPlan, {
+      const result = await applyMaintainPlan(maintainPlan, {
         batchConflictAction: maintainBatchAction,
       });
       if (result.status === "aborted") {
@@ -550,7 +550,7 @@ export function App({ startRoute, onExit }: AppProps) {
     }
   };
 
-  useKeyboard((key) => {
+  useKeyboard(async (key) => {
     const blockHotkeysForTextEntry = activeRoute === "stats" && statsResetArmed;
 
     if (key.name === "q") {
@@ -696,7 +696,7 @@ export function App({ startRoute, onExit }: AppProps) {
         }
 
         if (isEnterKey(key.name)) {
-          const transition = onInitSelectPathsEnter(profiles, pathSelection);
+          const transition = await onInitSelectPathsEnter(profiles, pathSelection);
           setInitStep(transition.nextStep);
           setInitResult(transition.resultLines);
           setInitPlan(transition.plan);
@@ -733,7 +733,7 @@ export function App({ startRoute, onExit }: AppProps) {
             return;
           }
 
-          const resolved = resolveDuplicateConflict(initPlan, currentConflict.id, source);
+          const resolved = await resolveDuplicateConflict(initPlan, currentConflict.id, source);
           setInitPlan(resolved);
           const previewLines = buildInitPreviewLines(resolved);
           setInitPreviewLines(previewLines);

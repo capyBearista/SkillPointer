@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildInitPlan } from "./init-plan";
-import { buildMaintainPlan } from "./maintain-plan";
+import { buildInitPlan, type InitPlan } from "./init-plan";
+import { buildMaintainPlan, type MaintainPlan } from "./maintain-plan";
 import {
   buildInitPreviewLines,
   buildMaintainPreviewLines,
@@ -16,9 +16,9 @@ const PROFILE: PathProfile = {
   vaultDir: "/tmp/vault",
 };
 
-test("buildInitPreviewLines includes exact category and skill names", () => {
+test("buildInitPreviewLines includes exact category and skill names", async () => {
   const plan = {
-    ...buildInitPlan({ profiles: [] }),
+    ...await buildInitPlan({ profiles: [] }),
     moveOperations: [
       {
         id: "move:1",
@@ -49,7 +49,8 @@ test("buildInitPreviewLines includes exact category and skill names", () => {
         ],
       },
     ],
-  };
+    conflicts: [], summary: {} as any
+  } as unknown as any as InitPlan;
 
   const lines = buildInitPreviewLines(plan);
   assert.ok(lines.includes("  - [security] skill-a"));
@@ -58,9 +59,9 @@ test("buildInitPreviewLines includes exact category and skill names", () => {
   assert.ok(lines.includes("  - auth-hardening: auth, security"));
 });
 
-test("buildInitPreviewLines includes destination conflict transparency", () => {
+test("buildInitPreviewLines includes destination conflict transparency", async () => {
   const plan = {
-    ...buildInitPlan({ profiles: [] }),
+    ...await buildInitPlan({ profiles: [] }),
     conflicts: [
       {
         id: "destination:/tmp/vault/security/skill-a",
@@ -69,14 +70,14 @@ test("buildInitPreviewLines includes destination conflict transparency", () => {
         operationId: "move:1",
       },
     ],
-  };
+  } as unknown as any as InitPlan;
 
   const lines = buildInitPreviewLines(plan);
   assert.ok(lines.includes("Potential destination conflicts (policy-dependent outcome):"));
   assert.ok(lines.includes("  - /tmp/vault/security/skill-a"));
 });
 
-test("buildMaintainPreviewLines includes exact move transitions", () => {
+test("buildMaintainPreviewLines includes exact move transitions", async () => {
   const plan = {
     ...buildMaintainPlan({
       profiles: [PROFILE],
@@ -104,7 +105,8 @@ test("buildMaintainPreviewLines includes exact move transitions", () => {
         skills: [],
       },
     ],
-  };
+    conflicts: [], actions: {} as any
+  } as unknown as any as MaintainPlan;
 
   const lines = buildMaintainPreviewLines(plan);
   assert.ok(lines.includes("  - skill-a: misc -> security"));

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { getCategoryForSkill } from "./categorization";
+import { getOrComputeIntelligence } from "./intelligence/cache.js";
 import { buildPointerContent } from "./pointer-template";
 import { readSkillDescription } from "./browse-data";
 import { deriveTagsWithOptions } from "./tags";
@@ -153,10 +154,10 @@ function buildCategoryIndexForProfile(
   return index;
 }
 
-function buildPointerOperations(
+async function buildPointerOperations(
   profiles: PathProfile[],
   moveOperations: MaintainMoveOperation[],
-): MaintainPointerOperation[] {
+): Promise<MaintainPointerOperation[]> {
   const pointerOperations: MaintainPointerOperation[] = [];
 
   for (const profile of profiles) {
@@ -166,13 +167,16 @@ function buildPointerOperations(
         continue;
       }
 
-      const skillsList = Array.from(skills).map(skillName => {
+      const skillsList = await Promise.all(Array.from(skills).map(async skillName => {
         const skillPath = path.join(profile.vaultDir, categoryName, skillName);
         const skillFile = path.join(skillPath, "SKILL.md");
         const description = fs.existsSync(skillFile) ? readSkillDescription(skillFile) : "No description provided.";
-        const tags = deriveTagsWithOptions(skillName, description, { maxTags: 5 });
+        const content = fs.existsSync(skillFile) ? fs.readFileSync(skillFile, "utf-8") : "";
+        
+        const meta = await getOrComputeIntelligence(profile.vaultDir, skillName, description, content);
+        const tags = meta.tags;
         return { name: skillName, description, path: skillPath, tags };
-      });
+      }));
 
       pointerOperations.push({
         profileId: profile.id,
@@ -253,7 +257,7 @@ function buildRecategorizeOperations(
   };
 }
 
-export function buildMaintainPlan(options: BuildMaintainPlanOptions): MaintainPlan {
+export async function buildMaintainPlan(options: BuildMaintainPlanOptions): Promise<MaintainPlan> {
   const { profiles, actions } = options;
 
   let moveOperations: MaintainMoveOperation[] = [];
@@ -266,7 +270,7 @@ export function buildMaintainPlan(options: BuildMaintainPlanOptions): MaintainPl
   }
 
   const pointerOperations = actions.regeneratePointers
-    ? buildPointerOperations(profiles, moveOperations)
+    ? await buildPointerOperations(profiles, moveOperations)
     : [];
 
   return {
@@ -355,10 +359,10 @@ function cleanupStalePointers(
   }
 }
 
-export function applyMaintainPlan(
+export async function applyMaintainPlan(
   plan: MaintainPlan,
   options: ApplyMaintainPlanOptions,
-): ApplyMaintainPlanResult {
+): Promise<ApplyMaintainPlanResult> {
   if (options.batchConflictAction === "abort" && plan.conflicts.length > 0) {
     return {
       status: "aborted",
@@ -384,7 +388,7 @@ export function applyMaintainPlan(
   }
 
   const updatedPointerOperations = plan.actions.regeneratePointers
-    ? buildPointerOperations(plan.profiles, [])
+    ? await buildPointerOperations(plan.profiles, [])
     : [];
   cleanupStalePointers(plan.profiles, updatedPointerOperations);
   const pointerCount = applyPointers(updatedPointerOperations);
