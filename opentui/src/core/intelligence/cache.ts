@@ -13,8 +13,8 @@ export async function readIntelligenceIndex(vaultPath: string): Promise<Intellig
   try {
     const data = await fs.readFile(indexPath, "utf-8");
     return JSON.parse(data) as IntelligenceIndex;
-  } catch (err: any) {
-    if (err.code === "ENOENT") {
+  } catch (err: unknown) {
+    if (err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT") {
       return null;
     }
     throw err;
