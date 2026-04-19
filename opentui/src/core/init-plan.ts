@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { getCategoryForSkill } from "./categorization";
@@ -206,8 +207,9 @@ async function gatherPointerOperations(
       const skillsList = await Promise.all(Array.from(skillNames).map(async skillName => {
         const skillPath = path.join(profileVault, categoryName, skillName);
         const skillFile = path.join(skillPath, "SKILL.md");
-        const description = fs.existsSync(skillFile) ? readSkillDescription(skillFile) : "No description provided.";
-        const content = fs.existsSync(skillFile) ? fs.readFileSync(skillFile, "utf-8") : "";
+        const hasFile = await access(skillFile).then(() => true).catch(() => false);
+        const description = hasFile ? readSkillDescription(skillFile) : "No description provided.";
+        const content = hasFile ? await readFile(skillFile, "utf-8") : "";
         
         const meta = await getOrComputeIntelligence(profile.vaultDir, skillName, description, content);
         const tags = meta.tags;
@@ -538,7 +540,16 @@ export async function applyInitPlan(
     }
 
     fs.mkdirSync(path.dirname(operation.destinationPath), { recursive: true });
-    fs.renameSync(operation.sourcePath, operation.destinationPath);
+    try {
+      fs.renameSync(operation.sourcePath, operation.destinationPath);
+    } catch (err: any) {
+      if (err.code === "EXDEV") {
+        fs.cpSync(operation.sourcePath, operation.destinationPath, { recursive: true });
+        fs.rmSync(operation.sourcePath, { recursive: true, force: true });
+      } else {
+        throw err;
+      }
+    }
     movedCount += 1;
   }
 
