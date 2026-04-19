@@ -1,3 +1,5 @@
+import type { TagProviderAsync } from "./intelligence/provider-interface.js";
+
 function normalizeStr(str: string): string {
   return str.toLowerCase().trim();
 }
@@ -20,6 +22,11 @@ export type TagProvider = (context: TagProviderContext) => string[];
 export type DeriveTagsOptions = {
   maxTags?: number;
   provider?: TagProvider;
+};
+
+export type DeriveTagsAsyncOptions = {
+  maxTags?: number;
+  provider?: TagProviderAsync;
 };
 
 /**
@@ -150,6 +157,45 @@ export function deriveTagsWithOptions(
 
   const tags = new Set<string>();
   const providerTags = options.provider ? options.provider(context) : [];
+  for (const tag of providerTags) {
+    const normalized = toKebabCase(tag);
+    if (!normalized) {
+      continue;
+    }
+    tags.add(normalized);
+    if (tags.size >= maxTags) {
+      return Array.from(tags).slice(0, maxTags);
+    }
+  }
+
+  for (const tag of deriveHeuristicTags(context)) {
+    tags.add(tag);
+    if (tags.size >= maxTags) {
+      break;
+    }
+  }
+
+  return Array.from(tags).slice(0, maxTags);
+}
+
+export async function deriveTagsAsync(
+  name: string,
+  description: string,
+  options: DeriveTagsAsyncOptions = {},
+): Promise<string[]> {
+  const maxTags = options.maxTags ?? 3;
+  const context: TagProviderContext = { name, description, maxTags };
+
+  const tags = new Set<string>();
+  let providerTags: string[] = [];
+  if (options.provider) {
+    try {
+      providerTags = await options.provider(context);
+    } catch (err) {
+      console.warn("Async provider failed, falling back to heuristics:", err);
+    }
+  }
+
   for (const tag of providerTags) {
     const normalized = toKebabCase(tag);
     if (!normalized) {

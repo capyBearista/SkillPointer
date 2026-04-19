@@ -173,7 +173,7 @@ async function computeSkillsListForCategory(
 ) {
   const profileVault = path.resolve(profile.vaultDir);
   return Promise.all(
-    Array.from(skillNames).map(async (skillName) => {
+    Array.from<string>(skillNames).map(async (skillName) => {
       const skillPath = path.join(profileVault, categoryName, skillName);
       const skillFile = path.join(skillPath, "SKILL.md");
       const hasFile = await access(skillFile).then(() => true).catch(() => false);

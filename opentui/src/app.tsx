@@ -770,7 +770,7 @@ export function App({ startRoute, onExit }: AppProps) {
         }
 
         if (isEnterKey(key.name)) {
-          executeInitApply();
+          await executeInitApply();
           return;
         }
       }
@@ -883,12 +883,12 @@ export function App({ startRoute, onExit }: AppProps) {
 
       if (isEnterKey(key.name)) {
         if (maintainCursor === 3) {
-          buildMaintainPreview();
+          await buildMaintainPreview();
           return;
         }
 
         if (maintainCursor === 4) {
-          executeMaintainApply();
+          await executeMaintainApply();
           return;
         }
 

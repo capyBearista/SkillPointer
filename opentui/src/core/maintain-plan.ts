@@ -168,7 +168,7 @@ async function buildPointerOperations(
         continue;
       }
 
-      const skillsList = await Promise.all(Array.from(skills).map(async skillName => {
+      const skillsList = await Promise.all(Array.from<string>(skills).map(async skillName => {
         const skillPath = path.join(profile.vaultDir, categoryName, skillName);
         const skillFile = path.join(skillPath, "SKILL.md");
         const hasFile = await access(skillFile).then(() => true).catch(() => false);
