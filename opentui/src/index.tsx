@@ -4,6 +4,15 @@ import { createRoot } from "@opentui/react";
 import { App } from "./app";
 import { renderBigExitBanner } from "./exit-message";
 import { isRouteName, isSetupFlag, type RouteName } from "./routes";
+import { LocalIntelligenceProvider } from "./core/intelligence/provider-local";
+import { setIntelligenceProvider } from "./core/intelligence/runtime";
+
+// Initialize Intelligence Provider in the background
+const provider = new LocalIntelligenceProvider();
+setIntelligenceProvider(provider);
+provider.init().catch(err => {
+  console.warn("Failed to initialize NLP provider:", err);
+});
 
 function resolveRoute(argv: string[]): RouteName {
   const candidate = argv[2];

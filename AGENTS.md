@@ -1,25 +1,86 @@
-# AGENTS.md
+# SkillCat
 
-## What this repo is
-- This repo now delivers an OpenTUI-first terminal application runtime for SkillCat, with migration core logic retained in `skillcat/installer.py`.
-- There is no CI pipeline in-repo; verify changes with `bunx skillcat` / `npx skillcat` plus targeted sandbox checks.
+## Overview
+- **Type**: Hybrid Polyglot Repository (Terminal application + environment migration toolkit)
+- **Stack**: TypeScript, React, OpenTUI (`@opentui/core`, `@opentui/react`), Python
+- **Architecture**: Interactive Terminal Application phase (read-only OS layer) followed by Migration phase (stateful OS mutation layer)
+- **Runners**: Bun, Node (`bunx`, `npx`), Python compatibility layer
 
-## Real entrypoints
-- Interactive runtime: `bunx skillcat` (primary) or `npx skillcat`
-- Python compatibility launcher: `python -m skillcat` (spawns Bun runtime)
-- Python retained setup path: `python -m skillcat --run-setup --agent <opencode|claude>`
-- Windows wrappers launch npm runtime: `npx skillcat` (`Install.bat`, `Install.vbs`)
+This AGENTS.md is the authoritative source for development guidelines. 
+Subdirectories contain specialized AGENTS.md files that extend these rules.
 
-## Safety-critical behavior (easy to miss)
-- Interactive launch should not mutate user directories during Phase B.
-- Stateful migration behavior remains in `skillcat/installer.py` and mutates user directories under `$HOME` when explicitly invoked.
+## Universal Development Rules
+
+### Code Quality (MUST)
+- **MUST** include tests for all new UI/core state features in the `opentui` layer using Node's native test runner
+- **MUST** run sandbox checks for Python migration logic before opening a PR
+- **MUST** keep the interactive UI phase strictly **read-only** regarding user directories (e.g. `~/.config/opencode`, `~/.claude`)
+- **MUST NOT** commit secrets, API keys, or tokens
+
+### Best Practices (SHOULD)  
+- **SHOULD** prefer functional components with hooks for OpenTUI/React rendering
+- **SHOULD** use descriptive variable names and keep functions focused
+- **SHOULD** keep changes scoped to the task; avoid unrelated refactors
+- **SHOULD** update `pointer_template` in `skillcat/installer.py` instead of hand-editing generated `SKILL.md` pointers
+- **SHOULD** set up formatting and linting tools in the future (currently none configured, but standard conventions apply)
+
+### Delivery Discipline (MUST)
+- **MUST** open PRs from feature branches; never commit directly to `main`
+- **MUST** include a short validation summary (what was tested and results) for both the UI flow and migration scripts
+
+### Anti-Patterns (MUST NOT)
+- **MUST NOT** push directly to the main branch
+- **MUST NOT** run destructive Python migration operations (`shutil.rmtree`) without explicit user confirmation
+- **MUST NOT** hand-edit generated `*-category-pointer/SKILL.md` files (they are dynamically regenerated)
+
+## Core Commands
+
+### Development
+- `bunx skillcat` (or `npx skillcat`) - Interactive runtime launch (primary)
+- `python -m skillcat` - Python compatibility launcher (spawns Bun runtime)
+- `python -m skillcat --run-setup --agent <opencode|claude>` - Direct Python retained setup path
+- `node --import tsx --test opentui/src/core/**/*.test.ts` - Run TypeScript tests
+
+## Project Structure
+
+### Applications
+- **`opentui/`** → Modern terminal application core ([see opentui/AGENTS.md](opentui/AGENTS.md))
+  - UI Routes: `src/routes/` (React components mapping to TUI states)
+  - Business Logic: `src/core/` (Navigation state, intelligence caches)
+  - Entry Points: `src/index.tsx`, `bin/skillcat.mjs`
+
+### Infrastructure & Migration
+- **`skillcat/`** → Legacy/Compatibility Python package ([see skillcat/AGENTS.md](skillcat/AGENTS.md))
+  - Critical Migration Logic: `installer.py` (handles moving skills from active directories to hidden vaults)
+  - OS Pathing & Pointer Generation
+
+### Assets & Hidden Vaults
+- **`.agents/`** & **`skills/`** → The hidden vault and active skill directories respectively
+- **`assets/`** → Architecture diagrams and SVGs
+
+## Quick Find Commands
+
+### Code Navigation
+```bash
+# Find a UI Component or Route
+rg -n "export (function|const) .*Route" opentui/src
+
+# Find Core Logic & State
+rg -n "export (class|function) .*State" opentui/src/core
+
+# Find Python Setup Logic
+rg -n "def " skillcat/installer.py
+```
+
+## Security & OS Mutations
+
+### Safe Operations
+- The migration phase (`skillcat/installer.py`) is the **ONLY** place where destructive/stateful operations occur on the user's `~/.config/opencode` or `~/.claude/` directories.
 - If a destination skill folder already exists in the hidden vault, it is deleted via `shutil.rmtree(dest)` before move.
-- Migration skips only:
-  - folders ending with `-category-pointer`
-  - empty folders
-- Script exits early if active skills directory does not exist.
+- Interactive UI phases must remain strictly pure/read-only on the OS.
+- Migration skips only: folders ending with `-category-pointer` and empty folders.
 
-## Paths and mode switching
+### Paths and Mode Switching
 - OpenCode paths:
   - active skills: `~/.config/opencode/skills`
   - hidden vault: `~/.opencode-skill-libraries`
@@ -27,77 +88,26 @@
   - active skills: `~/.claude/skills`
   - hidden vault: `~/.skillcat-vault`
 
-## Categorization and pointer generation
-- Category assignment is heuristic and name-based (`DOMAIN_HEURISTICS` in `skillcat/installer.py`), with `_uncategorized` fallback.
-- Pointer generation scans the hidden vault recursively for `SKILL.md` and creates one `*-category-pointer/SKILL.md` per non-empty category.
-- Pointer text is generated from the in-script template; keep pointer instructions in sync by editing `pointer_template` in `skillcat/installer.py`, not by hand-editing generated pointers.
+## Git Workflow
 
-## Editing guidance for future agents
-- Prefer minimal edits in `skillcat/installer.py`; this script is the product.
-- If changing category logic, update only `DOMAIN_HEURISTICS` and/or `get_category_for_skill`.
-- If changing user-facing pointer instructions, update `pointer_template` and regenerate pointers; do not patch generated output as source of truth.
+- Branch from `main` for features: `feature/description`, `fix/description`
+- Treat git history as functional long-term memory for the codebase. When creating a new commit for uncommitted changes run `git status && git diff HEAD && git status --porcelain` to see what files are uncommitted
+- Keep commit messages **atomic**
 
+## Testing Requirements
 
-## What Are Skills?
-Source: https://agentskills.io/what-are-skills
+- **Unit tests**: Handled via Node's native test runner (`node --import tsx --test`) in `opentui/src/core/`.
+- **Migration scripts**: Currently mock-only or local sandbox validation. Never run migrations on production directories without approval.
 
-> Agent Skills are a lightweight, open format for extending AI agent capabilities with specialized knowledge and workflows.
+## Available Tools
 
-At its core, a skill is a folder containing a `SKILL.md` file. This file includes metadata (`name` and `description`, at minimum) and instructions that tell an agent how to perform a specific task. Skills can also bundle scripts, templates, and reference materials.
+You have access to:
+- Standard bash tools (`rg`, `git`, `node`, `bun`, `npm`, etc.)
+- OpenTUI Skill (for components, layout, keyboard handling, testing)
+- Python environment tools
 
-```directory theme={null}
-my-skill/
-├── SKILL.md          # Required: instructions + metadata
-├── scripts/          # Optional: executable code
-├── references/       # Optional: documentation
-└── assets/           # Optional: templates, resources
-```
+## Specialized Context
 
-### How skills work
-
-Skills use **progressive disclosure** to manage context efficiently:
-
-1. **Discovery**: At startup, agents load only the name and description of each available skill, just enough to know when it might be relevant.
-
-2. **Activation**: When a task matches a skill's description, the agent reads the full `SKILL.md` instructions into context.
-
-3. **Execution**: The agent follows the instructions, optionally loading referenced files or executing bundled code as needed.
-
-This approach keeps agents fast while giving them access to more context on demand.
-
-### The SKILL.md file
-
-Every skill starts with a `SKILL.md` file containing YAML frontmatter and Markdown instructions:
-
-```mdx theme={null}
----
-name: pdf-processing
-description: Extract PDF text, fill forms, merge files. Use when handling PDFs.
----
-
-# PDF Processing
-
-## When to use this skill
-Use this skill when the user needs to work with PDF files...
-
-## How to extract text
-1. Use pdfplumber for text extraction...
-
-## How to fill forms
-...
-```
-
-The following frontmatter is required at the top of `SKILL.md`:
-
-* `name`: A short identifier
-* `description`: When to use this skill
-
-The Markdown body contains the actual instructions and has no specific restrictions on structure or content.
-
-This simple format has some key advantages:
-
-* **Self-documenting**: A skill author or user can read a `SKILL.md` and understand what it does, making skills easy to audit and improve.
-
-* **Extensible**: Skills can range in complexity from just text instructions to executable code, assets, and templates.
-
-* **Portable**: Skills are just files, so they're easy to edit, version, and share.
+When working in specific directories, refer to their AGENTS.md:
+- Terminal UI application: [opentui/AGENTS.md](opentui/AGENTS.md)
+- Python Migration Logic: [skillcat/AGENTS.md](skillcat/AGENTS.md)
