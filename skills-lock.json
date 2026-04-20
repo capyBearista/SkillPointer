@@ -1,20 +1,55 @@
 {
   "version": 1,
   "skills": {
+    "build-dashboard": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "computedHash": "c6f7389af8916262ce81073af1f4d960e3b86b696a51bd1916b140401991f6e7"
+    },
     "bun": {
       "source": "bun.sh",
       "sourceType": "well-known",
       "computedHash": "c20fe20eb84bb56fd5a96eae6e36c5fd8d38f989818a4944f8a08140fe5e7a5b"
+    },
+    "data-visualization": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "computedHash": "a238cd5981b2da6bd7ecc24cfb3d7238be993ee5a2ad97acb414f9758aba13dd"
     },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "computedHash": "9e1c8b3103f92fa8092568a44fe64858de7c5c9dc65ce4bea8f168080e889cfd"
     },
+    "hf-cli": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "computedHash": "c963edc6f310f66ab80248cb019d10aef3ebff187c0a5a7aea7059166a5ccb8a"
+    },
+    "huggingface-community-evals": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "computedHash": "51b42948064ee943df2995af543c7d011d0786eb8ee04392eb9ea60e359833b2"
+    },
+    "huggingface-llm-trainer": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "computedHash": "b082b292469b6a9959aa702c9cc5878fd5a328d86226322f49dc06b1055994bd"
+    },
     "opentui": {
       "source": "msmps/opentui-skill",
       "sourceType": "github",
       "computedHash": "ebfea5f246935e49225f7dd9b03a15721fd4d00c83f2c862219de60941480ff8"
+    },
+    "transformers-js": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "computedHash": "1fca591721276bc2bc240759320a10ed5165602c9dd639265d359acee5fb6388"
+    },
+    "validate-data": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "computedHash": "98fb2c31a30b00277253c15ca5fcbdb909dff41551ab086056b926de974225a8"
     }
   }
 }
