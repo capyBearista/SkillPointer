@@ -51,8 +51,11 @@ async function runBenchmark() {
     
     if (!description) description = content.slice(0, 200).replace(/\n/g, ' ');
 
+    // For the benchmark, we provide the full raw content as the body.
+    const body = content;
+
     const startInference = performance.now();
-    const generatedTags = await nlpDeriveTags(provider, name, description, { minConfidence: 0.25, maxTags: 5 });
+    const generatedTags = await nlpDeriveTags(provider, name, description, { minConfidence: 0.25, maxTags: 5, body });
     const endInference = performance.now();
     
     const latency = endInference - startInference;

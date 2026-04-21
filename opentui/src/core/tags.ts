@@ -14,6 +14,7 @@ function toKebabCase(value: string): string {
 export type TagProviderContext = {
   name: string;
   description: string;
+  body?: string;
   maxTags: number;
 };
 
@@ -142,18 +143,18 @@ function deriveHeuristicTags(context: TagProviderContext): string[] {
  * Derives tags from a skill's name and description.
  * Ensures tags are lowercase kebab-case and limits to maxTags (target 3-5 per PRD).
  */
-export function deriveTags(name: string, description: string, maxTags: number = 3): string[] {
-  const context: TagProviderContext = { name, description, maxTags };
+export function deriveTags(name: string, description: string, maxTags: number = 3, body?: string): string[] {
+  const context: TagProviderContext = { name, description, maxTags, body };
   return deriveHeuristicTags(context);
 }
 
 export function deriveTagsWithOptions(
   name: string,
   description: string,
-  options: DeriveTagsOptions = {},
+  options: DeriveTagsOptions & { body?: string } = {},
 ): string[] {
   const maxTags = options.maxTags ?? 3;
-  const context: TagProviderContext = { name, description, maxTags };
+  const context: TagProviderContext = { name, description, maxTags, body: options.body };
 
   const tags = new Set<string>();
   const providerTags = options.provider ? options.provider(context) : [];
@@ -181,10 +182,10 @@ export function deriveTagsWithOptions(
 export async function deriveTagsAsync(
   name: string,
   description: string,
-  options: DeriveTagsAsyncOptions = {},
+  options: DeriveTagsAsyncOptions & { body?: string } = {},
 ): Promise<string[]> {
   const maxTags = options.maxTags ?? 3;
-  const context: TagProviderContext = { name, description, maxTags };
+  const context: TagProviderContext = { name, description, maxTags, body: options.body };
 
   const tags = new Set<string>();
   let providerTags: string[] = [];

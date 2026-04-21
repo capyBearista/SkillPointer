@@ -2,6 +2,7 @@ import { env, pipeline, type FeatureExtractionPipeline } from '@xenova/transform
 import type { IntelligenceProvider, ScoredTag } from './provider-interface.js';
 import type { PredictedCategory } from './types.js';
 import { TAG_DICTIONARY, type TagProviderContext } from '../tags.js';
+import { STOP_WORDS } from './tagger.js';
 
 env.allowLocalModels = true;
 
@@ -11,7 +12,7 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
   private initPromise: Promise<void> | null = null;
   private staticTagsEmbedding: { tag: string; vector: Float32Array }[] = [];
 
-  constructor(private modelId: string = 'Xenova/all-MiniLM-L6-v2') {}
+  constructor(private modelId: string = 'Snowflake/snowflake-arctic-embed-xs') {}
 
   async init(): Promise<void> {
     if (this.isLoaded) return;
@@ -63,18 +64,27 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
     if (!this.isReady()) await this.init();
     if (!this.extractor) throw new Error("Extractor pipeline not loaded.");
 
-    const text = `${context.name}. ${context.description}`;
+    // Truncate the body to ~2500 characters so tokenization doesn't waste CPU on thousands of words
+    // that will ultimately be truncated by the 512 token model limit.
+    const bodyText = context.body ? context.body.slice(0, 2500) : '';
+    const text = `${context.name}. ${context.description}${bodyText ? `\n\n${bodyText}` : ''}`;
     
     const docOutput = await this.extractor(text, { pooling: 'mean', normalize: true });
     const docEmbedding = docOutput.data as Float32Array;
     const dim = docOutput.dims[1];
 
+    // Source candidates from the first 1,000 characters of the body.
+    // This creates a "wide net" of technical candidates for future LLM oracle evaluation
+    // without overflowing the batch sizes and blowing the memory/latency budget.
+    const candidateBodyText = context.body ? context.body.slice(0, 1000) : '';
+    const candidateText = `${context.name}. ${context.description}${candidateBodyText ? `\n\n${candidateBodyText}` : ''}`;
+
     // Build candidates: unigrams and bigrams
-    const words = text
+    const words = candidateText
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, ' ')
       .split(/\s+/)
-      .filter(w => w.length >= 3);
+      .filter(w => w.length >= 3 && !STOP_WORDS.has(w));
 
     const candidates = new Set<string>();
     
@@ -89,11 +99,15 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
     const allCandidates: { tag: string; vector: Float32Array }[] = [...this.staticTagsEmbedding];
 
     if (localCandidates.length > 0) {
-      const localOut = await this.extractor(localCandidates, { pooling: 'mean', normalize: true });
-      const localData = localOut.data as Float32Array;
-      for (let i = 0; i < localCandidates.length; i++) {
-        const slice = new Float32Array(localData.slice(i * dim, (i + 1) * dim));
-        allCandidates.push({ tag: localCandidates[i], vector: slice });
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < localCandidates.length; i += BATCH_SIZE) {
+        const batch = localCandidates.slice(i, i + BATCH_SIZE);
+        const localOut = await this.extractor(batch, { pooling: 'mean', normalize: true });
+        const localData = localOut.data as Float32Array;
+        for (let j = 0; j < batch.length; j++) {
+          const slice = new Float32Array(localData.slice(j * dim, (j + 1) * dim));
+          allCandidates.push({ tag: batch[j], vector: slice });
+        }
       }
     }
 

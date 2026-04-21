@@ -1,12 +1,16 @@
 import type { ScoredTag, IntelligenceProvider } from './provider-interface.js';
+import { eng } from 'stopword';
 
 export interface TaggerOptions {
   minConfidence?: number;
   maxTags?: number;
+  body?: string;
 }
 
-const STOP_WORDS = new Set([
-  'this', 'that', 'with', 'from', 'when', 'then', 'skill', 'use', 'using', 'into', 'your', 'their', 'about', 'across', 'helps', 'helper'
+// Combine the standard NLTK-style English stop-words with a few skillcat-specific terms
+export const STOP_WORDS = new Set([
+  ...eng,
+  'skill', 'use', 'using', 'helps', 'helper'
 ]);
 
 /**
@@ -21,7 +25,7 @@ export async function nlpDeriveTags(
   const minConfidence = options.minConfidence ?? 0.3; // Default threshold
   const maxTags = options.maxTags ?? 5;
 
-  const rawScoredTags = await provider.deriveTags({ name, description, maxTags });
+  const rawScoredTags = await provider.deriveTags({ name, description, body: options.body, maxTags });
 
   const filteredTags = rawScoredTags
     .filter(t => t.score >= minConfidence)
