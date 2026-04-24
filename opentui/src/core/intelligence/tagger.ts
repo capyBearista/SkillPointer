@@ -1,17 +1,11 @@
 import type { ScoredTag, IntelligenceProvider } from './provider-interface.js';
-import { eng } from 'stopword';
+import { STOP_WORDS, normalizeTag } from '../tags.js';
 
 export interface TaggerOptions {
   minConfidence?: number;
   maxTags?: number;
   body?: string;
 }
-
-// Combine the standard NLTK-style English stop-words with a few skillcat-specific terms
-export const STOP_WORDS = new Set([
-  ...eng,
-  'skill', 'use', 'using', 'helps', 'helper'
-]);
 
 /**
  * Derives and normalizes tags using an NLP Intelligence Provider.
@@ -31,17 +25,10 @@ export async function nlpDeriveTags(
     .filter(t => t.score >= minConfidence)
     .map(t => t.tag)
     .map(t => normalizeTag(t))
-    .filter(t => t.length > 2 && !STOP_WORDS.has(t));
+    .filter(t => t.length >= 2 && !STOP_WORDS.has(t));
 
   // Deduplicate after normalization
   const uniqueTags = Array.from(new Set(filteredTags));
 
   return uniqueTags.slice(0, maxTags);
-}
-
-function normalizeTag(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }

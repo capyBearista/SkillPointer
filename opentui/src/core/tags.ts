@@ -1,4 +1,5 @@
 import type { TagProviderAsync } from "./intelligence/provider-interface.js";
+import { eng } from "stopword";
 
 function normalizeStr(str: string): string {
   return str.toLowerCase().trim();
@@ -67,24 +68,38 @@ export const TAG_DICTIONARY: Record<string, string[]> = {
   "ai-ml": ["ai", "ml", "llm", "gpt", "model", "inference", "prompt"],
 };
 
-const STOP_WORDS = new Set([
-  "this",
-  "that",
-  "with",
-  "from",
-  "when",
-  "then",
+export const STOP_WORDS = new Set([
+  ...eng,
   "skill",
   "use",
   "using",
-  "into",
-  "your",
-  "their",
-  "about",
-  "across",
   "helps",
   "helper",
 ]);
+
+export function resolveTagAlias(alias: string): string | null {
+  const lowerAlias = alias.toLowerCase().trim();
+  for (const [key, keywords] of Object.entries(TAG_DICTIONARY)) {
+    if (key === lowerAlias || keywords.includes(lowerAlias)) {
+      return key;
+    }
+  }
+  const kebabAlias = toKebabCase(alias);
+  if (kebabAlias) {
+    for (const [key, keywords] of Object.entries(TAG_DICTIONARY)) {
+      if (key === kebabAlias || keywords.includes(kebabAlias)) {
+        return key;
+      }
+    }
+  }
+  return null;
+}
+
+export function normalizeTag(tag: string): string {
+  const resolved = resolveTagAlias(tag);
+  if (resolved) return resolved;
+  return toKebabCase(tag);
+}
 
 function deriveHeuristicTags(context: TagProviderContext): string[] {
   const tags = new Set<string>();
@@ -95,12 +110,9 @@ function deriveHeuristicTags(context: TagProviderContext): string[] {
 
   for (const [tag, keywords] of Object.entries(TAG_DICTIONARY)) {
     for (const keyword of keywords) {
-      if (
-        words.includes(keyword) ||
-        fullText.includes(` ${keyword} `) ||
-        fullText.startsWith(`${keyword} `) ||
-        fullText.endsWith(` ${keyword}`)
-      ) {
+      const escaped = keyword.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+      const regex = new RegExp(`(^|[^a-zA-Z0-9_])${escaped}([^a-zA-Z0-9_]|$)`, "i");
+      if (regex.test(fullText)) {
         tags.add(tag);
         break;
       }
@@ -119,7 +131,7 @@ function deriveHeuristicTags(context: TagProviderContext): string[] {
       .replace(/[^a-z0-9\s-]/g, " ")
       .split(/\s+/)
       .map((term) => toKebabCase(term))
-      .filter((term) => term.length > 3 && !STOP_WORDS.has(term) && !nameTerms.has(term));
+      .filter((term) => term.length >= 3 && !STOP_WORDS.has(term) && !nameTerms.has(term));
 
     for (const term of descTerms) {
       if (tags.size >= context.maxTags) {
@@ -159,7 +171,7 @@ export function deriveTagsWithOptions(
   const tags = new Set<string>();
   const providerTags = options.provider ? options.provider(context) : [];
   for (const tag of providerTags) {
-    const normalized = toKebabCase(tag);
+    const normalized = normalizeTag(tag);
     if (!normalized) {
       continue;
     }
@@ -198,7 +210,7 @@ export async function deriveTagsAsync(
   }
 
   for (const tag of providerTags) {
-    const normalized = toKebabCase(tag);
+    const normalized = normalizeTag(tag);
     if (!normalized) {
       continue;
     }

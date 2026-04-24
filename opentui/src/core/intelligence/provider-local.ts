@@ -1,8 +1,7 @@
 import { env, pipeline, type FeatureExtractionPipeline } from '@xenova/transformers';
 import type { IntelligenceProvider, ScoredTag } from './provider-interface.js';
 import type { PredictedCategory } from './types.js';
-import { TAG_DICTIONARY, type TagProviderContext } from '../tags.js';
-import { STOP_WORDS } from './tagger.js';
+import { TAG_DICTIONARY, type TagProviderContext, STOP_WORDS } from '../tags.js';
 
 env.allowLocalModels = true;
 
@@ -10,7 +9,7 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
   private extractor: FeatureExtractionPipeline | null = null;
   private isLoaded = false;
   private initPromise: Promise<void> | null = null;
-  private staticTagsEmbedding: { tag: string; vector: Float32Array }[] = [];
+  private staticTagsEmbedding: { tag: string; parentKey: string; vector: Float32Array }[] = [];
 
   constructor(private modelId: string = 'Snowflake/snowflake-arctic-embed-xs') {}
 
@@ -24,19 +23,23 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
       });
       this.isLoaded = true;
 
-      const staticTags = new Set<string>();
-      for (const tags of Object.values(TAG_DICTIONARY)) {
-        for (const t of tags) staticTags.add(t);
+      const uniqueAliases = new Map<string, string>();
+      for (const [parentKey, tags] of Object.entries(TAG_DICTIONARY)) {
+        if (!uniqueAliases.has(parentKey)) uniqueAliases.set(parentKey, parentKey);
+        for (const t of tags) {
+          if (!uniqueAliases.has(t)) uniqueAliases.set(t, parentKey);
+        }
       }
       
-      const staticTagsArray = Array.from(staticTags);
+      const staticTagsArray = Array.from(uniqueAliases.keys());
       if (staticTagsArray.length > 0) {
         const out = await this.extractor(staticTagsArray, { pooling: 'mean', normalize: true });
         const dim = out.dims[1];
         const data = out.data as Float32Array;
         for (let i = 0; i < staticTagsArray.length; i++) {
           const slice = new Float32Array(data.slice(i * dim, (i + 1) * dim));
-          this.staticTagsEmbedding.push({ tag: staticTagsArray[i], vector: slice });
+          const parentKey = uniqueAliases.get(staticTagsArray[i])!;
+          this.staticTagsEmbedding.push({ tag: staticTagsArray[i], parentKey, vector: slice });
         }
       }
     })();
@@ -84,19 +87,19 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, ' ')
       .split(/\s+/)
-      .filter(w => w.length >= 3 && !STOP_WORDS.has(w));
+      .filter(w => w.length > 0 && !STOP_WORDS.has(w));
 
     const candidates = new Set<string>();
     
     for (let i = 0; i < words.length; i++) {
-      if (words[i].length >= 4) candidates.add(words[i]);
+      if (words[i].length >= 3) candidates.add(words[i]);
       if (i < words.length - 1) {
         candidates.add(`${words[i]}-${words[i+1]}`); // bigram
       }
     }
 
     const localCandidates = Array.from(candidates).filter(c => isValidCandidate(c, context.name));
-    const allCandidates: { tag: string; vector: Float32Array }[] = [...this.staticTagsEmbedding];
+    const allCandidates: { tag: string; parentKey: string; vector: Float32Array }[] = [...this.staticTagsEmbedding];
 
     if (localCandidates.length > 0) {
       const BATCH_SIZE = 500;
@@ -106,7 +109,7 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
         const localData = localOut.data as Float32Array;
         for (let j = 0; j < batch.length; j++) {
           const slice = new Float32Array(localData.slice(j * dim, (j + 1) * dim));
-          allCandidates.push({ tag: batch[j], vector: slice });
+          allCandidates.push({ tag: batch[j], parentKey: batch[j], vector: slice });
         }
       }
     }
@@ -119,9 +122,9 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
         dot += docEmbedding[j] * cand.vector[j];
       }
       
-      const existing = similarities.get(cand.tag) || 0;
+      const existing = similarities.get(cand.parentKey) || 0;
       if (dot > existing) {
-        similarities.set(cand.tag, dot);
+        similarities.set(cand.parentKey, dot);
       }
     }
 
@@ -142,8 +145,12 @@ function isValidCandidate(tag: string, skillName: string): boolean {
   const normalizedTag = tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   if (normalizedTag === normalizedName) return false;
   
-  // 2. Reject tags that are just the name with a suffix/prefix (e.g., "fastapi-templates-create")
-  if (normalizedTag.startsWith(normalizedName + '-') || normalizedTag.endsWith('-' + normalizedName)) return false;
+  // 2. Reject tags that are just meaningless structural prefixes
+  const meaninglessPrefixes = ['use-', 'skill-', 'plugin-', 'app-', 'lib-', 'name-', 'description-', 'tags-'];
+  if (meaninglessPrefixes.some(p => normalizedTag === p + normalizedName)) return false;
+  
+  const meaninglessSuffixes = ['-description', '-name', '-tags', '-skill'];
+  if (meaninglessSuffixes.some(s => normalizedTag === normalizedName + s)) return false;
   
   // 3. Reject overly long tags (>5 words in kebab-case)
   const wordCount = tag.split('-').filter(w => w.length > 0).length;
