@@ -26,8 +26,8 @@ export function buildPointerContent(params: {
 
   const skillsIndex = sortedSkills
     .map((skill) => {
-      const tags = skill.tags.length > 0 ? skill.tags : deriveTags(skill.name, skill.description, 5);
-      return `- **${skill.name}** [${tags.join(", ")}]: ${normalizePath(skill.path)}`;
+      const tags = skill.tags.length > 0 ? skill.tags : deriveTags(skill.name, skill.description, 10);
+      return `- **${skill.name}** [${tags.join(", ")}]: ${normalizePath(skill.path)}\n  *${skill.description}*`;
     })
     .join("\n");
 
@@ -61,5 +61,47 @@ This library contains ${params.count} specialized skills covering ${params.categ
 ${skillsIndex}
 
 *Reminder: consult local library files first and avoid blind external searching.*
+`;
+}
+
+export function buildGlobalIndexContent(params: {
+  totalSkills: number;
+  skills: { name: string; path: string; tags: string[] }[];
+}): string {
+  const homeDir = os.homedir();
+  const normalizePath = (p: string) => {
+    if (p.startsWith(homeDir)) {
+      return "~" + p.slice(homeDir.length);
+    }
+    return p;
+  };
+
+  const sortedSkills = [...params.skills].sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
+
+  const skillsIndex = sortedSkills
+    .map((skill) => {
+      const tagsStr = skill.tags.length > 0 ? ` [${skill.tags.join(", ")}]` : "";
+      return `- **${skill.name}**${tagsStr}: ${normalizePath(skill.path)}`;
+    })
+    .join("\n");
+
+  return `---
+name: skills-index
+description: A global semantic index of all hidden skills available. Use this to find the best skill for a task based on tags.
+---
+
+# Global Skills Index 🌐
+
+You have access to a massive hidden library of ${params.totalSkills} specialized skills. This index allows you to find the exact skill you need based on semantic tags.
+
+## Instructions
+1. Search this index to find skills whose tags best match the user's request.
+2. Read the specific Markdown files at the provided absolute paths.
+3. Do NOT guess paths. Always use the paths exactly as provided below.
+
+## Index
+${skillsIndex}
 `;
 }

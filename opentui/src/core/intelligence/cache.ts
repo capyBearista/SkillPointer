@@ -59,10 +59,10 @@ export async function getOrComputeIntelligence(
   const provider = getIntelligenceProvider();
   
   const tags = await deriveTagsAsync(skillName, description, {
-    maxTags: 5,
+    maxTags: 10,
     provider: provider ? async (ctx) => {
       const { nlpDeriveTags } = await import("./tagger.js");
-      return await nlpDeriveTags(provider, ctx.name, ctx.description, { maxTags: ctx.maxTags, minConfidence: 0.25 });
+      return await nlpDeriveTags(provider, ctx.name, ctx.description, { maxTags: ctx.maxTags, minConfidence: 0.65 });
     } : undefined
   });
   

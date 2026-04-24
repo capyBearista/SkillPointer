@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { getCategoryForSkill } from "./categorization";
 import { getOrComputeIntelligence } from "./intelligence/cache.js";
-import { buildPointerContent } from "./pointer-template";
+import { buildPointerContent, buildGlobalIndexContent } from "./pointer-template";
 import { readSkillDescription } from "./browse-data";
 import { deriveTagsWithOptions } from "./tags";
 import type { PathProfile } from "./path-profiles";
@@ -310,6 +310,9 @@ function shouldSkipMove(
 
 function applyPointers(pointerOperations: MaintainPointerOperation[]): number {
   let pointerCount = 0;
+  
+  const skillsByActiveDir = new Map<string, { totalSkills: number; skills: { name: string; path: string; tags: string[] }[] }>();
+
   for (const pointer of pointerOperations) {
     fs.mkdirSync(path.dirname(pointer.pointerPath), { recursive: true });
     const content = buildPointerContent({
@@ -321,7 +324,32 @@ function applyPointers(pointerOperations: MaintainPointerOperation[]): number {
     });
     fs.writeFileSync(pointer.pointerPath, content, "utf-8");
     pointerCount += 1;
+    
+    const activeDir = path.dirname(path.dirname(pointer.pointerPath));
+    
+    if (!skillsByActiveDir.has(activeDir)) {
+      skillsByActiveDir.set(activeDir, { totalSkills: 0, skills: [] });
+    }
+    const dirData = skillsByActiveDir.get(activeDir)!;
+    dirData.totalSkills += pointer.count;
+    dirData.skills.push(...pointer.skills);
   }
+
+  for (const [activeDir, data] of skillsByActiveDir.entries()) {
+    const globalIndexPath = path.join(activeDir, "skills-index", "SKILL.md");
+    if (data.totalSkills > 0) {
+      fs.mkdirSync(path.dirname(globalIndexPath), { recursive: true });
+      const content = buildGlobalIndexContent({
+        totalSkills: data.totalSkills,
+        skills: data.skills,
+      });
+      fs.writeFileSync(globalIndexPath, content, "utf-8");
+      pointerCount += 1;
+    } else if (fs.existsSync(globalIndexPath)) {
+      fs.rmSync(path.join(activeDir, "skills-index"), { recursive: true, force: true });
+    }
+  }
+
   return pointerCount;
 }
 

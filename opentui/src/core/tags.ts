@@ -143,7 +143,7 @@ function deriveHeuristicTags(context: TagProviderContext): string[] {
  * Derives tags from a skill's name and description.
  * Ensures tags are lowercase kebab-case and limits to maxTags (target 3-5 per PRD).
  */
-export function deriveTags(name: string, description: string, maxTags: number = 3, body?: string): string[] {
+export function deriveTags(name: string, description: string, maxTags: number = 10, body?: string): string[] {
   const context: TagProviderContext = { name, description, maxTags, body };
   return deriveHeuristicTags(context);
 }
@@ -153,7 +153,7 @@ export function deriveTagsWithOptions(
   description: string,
   options: DeriveTagsOptions & { body?: string } = {},
 ): string[] {
-  const maxTags = options.maxTags ?? 3;
+  const maxTags = options.maxTags ?? 10;
   const context: TagProviderContext = { name, description, maxTags, body: options.body };
 
   const tags = new Set<string>();
@@ -184,7 +184,7 @@ export async function deriveTagsAsync(
   description: string,
   options: DeriveTagsAsyncOptions & { body?: string } = {},
 ): Promise<string[]> {
-  const maxTags = options.maxTags ?? 3;
+  const maxTags = options.maxTags ?? 10;
   const context: TagProviderContext = { name, description, maxTags, body: options.body };
 
   const tags = new Set<string>();

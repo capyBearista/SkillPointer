@@ -95,7 +95,7 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
       }
     }
 
-    const localCandidates = Array.from(candidates);
+    const localCandidates = Array.from(candidates).filter(c => isValidCandidate(c, context.name));
     const allCandidates: { tag: string; vector: Float32Array }[] = [...this.staticTagsEmbedding];
 
     if (localCandidates.length > 0) {
@@ -131,4 +131,37 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
 
     return results;
   }
+}
+
+/**
+ * Pre-filter candidates to reject obviously bad tags before wasting embedding compute.
+ */
+function isValidCandidate(tag: string, skillName: string): boolean {
+  // 1. Reject exact matches to the skill name (e.g., "fastapi-templates" tag for "fastapi-templates" skill)
+  const normalizedName = skillName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const normalizedTag = tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (normalizedTag === normalizedName) return false;
+  
+  // 2. Reject tags that are just the name with a suffix/prefix (e.g., "fastapi-templates-create")
+  if (normalizedTag.startsWith(normalizedName + '-') || normalizedTag.endsWith('-' + normalizedName)) return false;
+  
+  // 3. Reject overly long tags (>5 words in kebab-case)
+  const wordCount = tag.split('-').filter(w => w.length > 0).length;
+  if (wordCount > 5) return false;
+  
+  // 4. Reject gibberish: excessive repeated non-alphanumeric characters
+  const gibberishMatch = tag.match(/[-_]{3,}/);
+  if (gibberishMatch) return false;
+  
+  // 5. Reject tags starting or ending with hyphens (formatting artifacts)
+  if (tag.startsWith('-') || tag.endsWith('-')) return false;
+  
+  // 6. Reject repeated words (e.g., "lark-shared-lark-shared", "kubernetes-kubernetes")
+  const words = tag.split('-').filter(w => w.length > 0);
+  if (words.length !== new Set(words).size) return false;
+  
+  // 7. Reject pure numeric or overly short tags
+  if (/^\d+$/.test(tag) || tag.length < 3) return false;
+  
+  return true;
 }

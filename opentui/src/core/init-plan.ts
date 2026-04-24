@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { getCategoryForSkill } from "./categorization";
 import { getOrComputeIntelligence } from "./intelligence/cache.js";
-import { buildPointerContent } from "./pointer-template";
+import { buildPointerContent, buildGlobalIndexContent } from "./pointer-template";
 import { readSkillDescription } from "./browse-data";
 import { deriveTagsWithOptions } from "./tags";
 import type { PathProfile } from "./path-profiles";
@@ -500,6 +500,8 @@ function cleanupStalePointers(
 
 function applyPointers(pointerOperations: PlannedPointerOperation[]): number {
   let pointerCount = 0;
+  
+  const skillsByActiveDir = new Map<string, { totalSkills: number; skills: { name: string; path: string; tags: string[] }[] }>();
 
   for (const pointer of pointerOperations) {
     ensureParentDir(pointer.pointerPath);
@@ -512,6 +514,28 @@ function applyPointers(pointerOperations: PlannedPointerOperation[]): number {
     });
     fs.writeFileSync(pointer.pointerPath, content, "utf-8");
     pointerCount += 1;
+    
+    if (!skillsByActiveDir.has(pointer.activeDir)) {
+      skillsByActiveDir.set(pointer.activeDir, { totalSkills: 0, skills: [] });
+    }
+    const dirData = skillsByActiveDir.get(pointer.activeDir)!;
+    dirData.totalSkills += pointer.count;
+    dirData.skills.push(...pointer.skills);
+  }
+
+  for (const [activeDir, data] of skillsByActiveDir.entries()) {
+    const globalIndexPath = path.join(activeDir, "skills-index", "SKILL.md");
+    if (data.totalSkills > 0) {
+      ensureParentDir(globalIndexPath);
+      const content = buildGlobalIndexContent({
+        totalSkills: data.totalSkills,
+        skills: data.skills,
+      });
+      fs.writeFileSync(globalIndexPath, content, "utf-8");
+      pointerCount += 1;
+    } else if (fs.existsSync(globalIndexPath)) {
+      fs.rmSync(path.join(activeDir, "skills-index"), { recursive: true, force: true });
+    }
   }
 
   return pointerCount;

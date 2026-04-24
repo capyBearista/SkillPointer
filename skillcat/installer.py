@@ -1,5 +1,6 @@
 import shutil
 import time
+import re
 from pathlib import Path
 
 # ==========================================
@@ -574,6 +575,29 @@ def generate_pointers():
         f"{Colors.BOLD}⚡ Phase 2: Generating Dynamic Category Pointers...{Colors.ENDC}\n"
     )
 
+    def parse_skill_metadata(skill_path: Path):
+        name = skill_path.parent.name
+        description = ""
+        tags = []
+        try:
+            content = skill_path.read_text(encoding="utf-8")
+            if content.startswith("---"):
+                end_idx = content.find("---", 3)
+                if end_idx != -1:
+                    frontmatter = content[3:end_idx]
+                    name_match = re.search(r"^name:\s*(.+)$", frontmatter, re.MULTILINE)
+                    if name_match:
+                        name = name_match.group(1).strip()
+                    desc_match = re.search(r"^description:\s*(.+)$", frontmatter, re.MULTILINE)
+                    if desc_match:
+                        description = desc_match.group(1).strip()
+                    tags_match = re.search(r"^tags:\s*\[(.*?)\]", frontmatter, re.MULTILINE)
+                    if tags_match:
+                        tags = [t.strip().strip("'\"") for t in tags_match.group(1).split(",") if t.strip()]
+        except Exception:
+            pass
+        return name, description, tags
+
     pointer_template = """---
 name: {category_name}-category-pointer
 description: Triggers when encountering any task related to {category_name}. This is a pointer to a library of specialized skills.
@@ -594,11 +618,17 @@ This library contains {count} specialized skills covering various aspects of {ca
 
 **Hidden Library Path:** `{library_path}`
 
+## Skills Index
+{skills_index}
+
 *Reminder: Do not guess best practices or blindly search GitHub. Always consult your local library files first.*
 """
 
     created_pointers = 0
     total_skills_indexed = 0
+    
+    # Track all skills for the global index
+    all_global_skills = []
 
     # We will scan the hidden_library_dir completely to ensure we include skills added previously or manually
     for cat_dir in hidden_library_dir.iterdir():
@@ -608,11 +638,28 @@ This library contains {count} specialized skills covering various aspects of {ca
         cat = cat_dir.name
 
         # Count actual SKILL.md files inside
-        count = sum(1 for p in cat_dir.rglob("SKILL.md"))
+        skill_files = list(cat_dir.rglob("SKILL.md"))
+        count = len(skill_files)
         if count == 0:
             continue
 
         total_skills_indexed += count
+
+        skills_index_lines = []
+        for skill_path in sorted(skill_files):
+            s_name, s_desc, s_tags = parse_skill_metadata(skill_path)
+            tags_str = f" [{', '.join(s_tags)}]" if s_tags else ""
+            desc_str = f"\n  *{s_desc}*" if s_desc else ""
+            normalized_path = str(skill_path.parent.absolute()).replace("\\", "/")
+            home_dir = str(Path.home()).replace("\\", "/")
+            if normalized_path.startswith(home_dir):
+                normalized_path = "~" + normalized_path[len(home_dir):]
+            skills_index_lines.append(f"- **{s_name}**{tags_str}: {normalized_path}{desc_str}")
+            all_global_skills.append({
+                "name": s_name,
+                "tags": s_tags,
+                "path": normalized_path
+            })
 
         pointer_name = f"{cat}-category-pointer"
         pointer_dir = active_skills_dir / pointer_name
@@ -624,9 +671,8 @@ This library contains {count} specialized skills covering various aspects of {ca
             category_name=cat,
             category_title=cat_title,
             count=count,
-            library_path=str(cat_dir.absolute()).replace(
-                "\\", "/"
-            ),  # Ensure cross-platform path format in markdown
+            library_path=str(cat_dir.absolute()).replace("\\", "/"),
+            skills_index="\n".join(skills_index_lines)
         )
 
         with open(pointer_dir / "SKILL.md", "w", encoding="utf-8") as f:
@@ -637,8 +683,45 @@ This library contains {count} specialized skills covering various aspects of {ca
             f"{Colors.CYAN}  ⊕ Created {pointer_name} ➔ Indexes {count} skills.{Colors.ENDC}"
         )
 
+    # Generate the global skills-index for "Tags Only" mode
+    if all_global_skills:
+        global_index_dir = active_skills_dir / "skills-index"
+        global_index_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Sort globally by name
+        all_global_skills.sort(key=lambda s: s["name"])
+        
+        global_index_lines = []
+        for s in all_global_skills:
+            tags_str = f" [{', '.join(s['tags'])}]" if s['tags'] else ""
+            global_index_lines.append(f"- **{s['name']}**{tags_str}: {s['path']}")
+            
+        global_index_content = f"""---
+name: skills-index
+description: A global semantic index of all hidden skills available. Use this to find the best skill for a task based on tags.
+---
+
+# Global Skills Index 🌐
+
+You have access to a massive hidden library of {total_skills_indexed} specialized skills. This index allows you to find the exact skill you need based on semantic tags.
+
+## Instructions
+1. Search this index to find skills whose tags best match the user's request.
+2. Read the specific Markdown files at the provided absolute paths.
+3. Do NOT guess paths. Always use the paths exactly as provided below.
+
+## Index
+{chr(10).join(global_index_lines)}
+"""
+        with open(global_index_dir / "SKILL.md", "w", encoding="utf-8") as f:
+            f.write(global_index_content)
+        
+        print(
+            f"{Colors.CYAN}  ⊕ Created skills-index ➔ Global semantic index of {total_skills_indexed} skills.{Colors.ENDC}"
+        )
+
     print(
-        f"\n{Colors.BLUE}✔ Successfully generated {created_pointers} ultra-lightweight pointers indexing {total_skills_indexed} total skills.{Colors.ENDC}"
+        f"\n{Colors.BLUE}✔ Successfully generated {created_pointers} ultra-lightweight pointers and 1 global index for {total_skills_indexed} total skills.{Colors.ENDC}"
     )
 
 

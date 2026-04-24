@@ -22,8 +22,8 @@ export async function nlpDeriveTags(
   description: string,
   options: TaggerOptions = {}
 ): Promise<string[]> {
-  const minConfidence = options.minConfidence ?? 0.3; // Default threshold
-  const maxTags = options.maxTags ?? 5;
+  const minConfidence = options.minConfidence ?? 0.65; // Default threshold
+  const maxTags = options.maxTags ?? 10;
 
   const rawScoredTags = await provider.deriveTags({ name, description, body: options.body, maxTags });
 
