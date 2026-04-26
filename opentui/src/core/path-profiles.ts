@@ -55,8 +55,8 @@ export function buildKnownPathProfiles(options: BuildOptions = {}): PathProfile[
     profiles.push({
       id: "sandbox",
       label: "Local Sandbox",
-      activeDir: path.join(workspaceRoot, ".skill-test", "skills"),
-      vaultDir: path.join(workspaceRoot, ".skill-test-vault"),
+      activeDir: path.join(workspaceRoot, ".test", "skills"),
+      vaultDir: path.join(workspaceRoot, ".test-vault"),
     });
   }
 

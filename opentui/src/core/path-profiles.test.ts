@@ -35,7 +35,7 @@ test("detectPathProfiles returns only existing supported active skill directorie
       recursive: true,
     });
     fs.mkdirSync(path.join(homeDir, ".claude", "skills"), { recursive: true });
-    fs.mkdirSync(path.join(workspaceRoot, ".skill-test", "skills"), { recursive: true });
+    fs.mkdirSync(path.join(workspaceRoot, ".test", "skills"), { recursive: true });
 
     const detected = detectPathProfiles({ homeDir, workspaceRoot });
     const ids = detected.map((profile: PathProfile) => profile.id).sort();

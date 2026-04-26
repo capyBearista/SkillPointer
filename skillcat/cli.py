@@ -30,6 +30,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default="opencode",
         help="Agent target for --run-setup.",
     )
+    parser.add_argument(
+        "--pointer-mode",
+        choices=["categories", "tags", "both"],
+        default="both",
+        help="Formatting mode for skill pointers (categories=desc only, tags=tags only, both=both).",
+    )
     return parser
 
 
@@ -67,7 +73,7 @@ def main() -> None:
         if args.run_setup:
             from . import installer as setup_script
 
-            setup_script.run_setup(agent=args.agent)
+            setup_script.run_setup(agent=args.agent, pointer_mode=args.pointer_mode)
             return
 
         start_route = args.command or "home"

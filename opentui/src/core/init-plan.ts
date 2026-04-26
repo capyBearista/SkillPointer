@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { getCategoryForSkill } from "./categorization";
 import { getOrComputeIntelligence } from "./intelligence/cache.js";
-import { buildPointerContent, buildGlobalIndexContent } from "./pointer-template";
-import { readSkillDescription } from "./browse-data";
+import { buildPointerContent, type PointerMode } from "./pointer-template";
+import { parseSkillDescriptionFromContent } from "./browse-data";
 import { deriveTagsWithOptions } from "./tags";
 import type { PathProfile } from "./path-profiles";
 
@@ -72,6 +72,7 @@ export type BuildInitPlanOptions = {
 
 export type ApplyInitPlanOptions = {
   batchConflictAction: PlanConflictAction;
+  pointerMode?: PointerMode;
 };
 
 export type ApplyInitPlanResult = {
@@ -177,8 +178,8 @@ async function computeSkillsListForCategory(
       const skillPath = path.join(profileVault, categoryName, skillName);
       const skillFile = path.join(skillPath, "SKILL.md");
       const hasFile = await access(skillFile).then(() => true).catch(() => false);
-      const description = hasFile ? readSkillDescription(skillFile) : "No description provided.";
       const content = hasFile ? await readFile(skillFile, "utf-8") : "";
+      const description = hasFile ? parseSkillDescriptionFromContent(content) : "No description provided.";
 
       const meta = await getOrComputeIntelligence(
         profile.vaultDir,
@@ -498,11 +499,9 @@ function cleanupStalePointers(
   }
 }
 
-function applyPointers(pointerOperations: PlannedPointerOperation[]): number {
+function applyPointers(pointerOperations: PlannedPointerOperation[], pointerMode?: PointerMode): number {
   let pointerCount = 0;
   
-  const skillsByActiveDir = new Map<string, { totalSkills: number; skills: { name: string; path: string; tags: string[] }[] }>();
-
   for (const pointer of pointerOperations) {
     ensureParentDir(pointer.pointerPath);
     const content = buildPointerContent({
@@ -511,10 +510,15 @@ function applyPointers(pointerOperations: PlannedPointerOperation[]): number {
       count: pointer.count,
       libraryPath: pointer.libraryPath,
       skills: pointer.skills,
+      displayMode: pointerMode,
     });
     fs.writeFileSync(pointer.pointerPath, content, "utf-8");
     pointerCount += 1;
-    
+  }
+
+  // Minimal manifest replacement for discoverability (skills-manifest.json)
+  const skillsByActiveDir = new Map<string, { totalSkills: number; skills: { name: string; path: string; tags: string[] }[] }>();
+  for (const pointer of pointerOperations) {
     if (!skillsByActiveDir.has(pointer.activeDir)) {
       skillsByActiveDir.set(pointer.activeDir, { totalSkills: 0, skills: [] });
     }
@@ -525,16 +529,20 @@ function applyPointers(pointerOperations: PlannedPointerOperation[]): number {
 
   for (const [activeDir, data] of skillsByActiveDir.entries()) {
     const globalIndexPath = path.join(activeDir, "skills-index", "SKILL.md");
-    if (data.totalSkills > 0) {
-      ensureParentDir(globalIndexPath);
-      const content = buildGlobalIndexContent({
-        totalSkills: data.totalSkills,
-        skills: data.skills,
-      });
-      fs.writeFileSync(globalIndexPath, content, "utf-8");
-      pointerCount += 1;
-    } else if (fs.existsSync(globalIndexPath)) {
+    if (fs.existsSync(globalIndexPath)) {
       fs.rmSync(path.join(activeDir, "skills-index"), { recursive: true, force: true });
+    }
+
+    const manifestPath = path.join(activeDir, "skills-manifest.json");
+    if (data.totalSkills > 0) {
+      ensureParentDir(manifestPath);
+      const manifestContent = {
+        totalSkills: data.totalSkills,
+        skills: data.skills.map(s => ({ name: s.name, path: s.path, tags: s.tags })),
+      };
+      fs.writeFileSync(manifestPath, JSON.stringify(manifestContent, null, 2), "utf-8");
+    } else if (fs.existsSync(manifestPath)) {
+      fs.rmSync(manifestPath, { force: true });
     }
   }
 
@@ -595,7 +603,7 @@ export async function applyInitPlan(
 
   const finalPointerOperations = await gatherPointerOperations(plan.profiles, []);
   cleanupStalePointers(plan.profiles, finalPointerOperations);
-  const pointerCount = applyPointers(finalPointerOperations);
+  const pointerCount = applyPointers(finalPointerOperations, options.pointerMode);
 
   return {
     status: "applied",

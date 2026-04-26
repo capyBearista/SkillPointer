@@ -71,12 +71,12 @@ export function getSandboxPaths(workspaceRoot = process.cwd()): {
   snapshotDir: string;
   vaultDir: string;
 } {
-  const rootDir = path.join(workspaceRoot, ".skill-test");
+  const rootDir = path.join(workspaceRoot, ".test");
   return {
     rootDir,
     skillsDir: path.join(rootDir, "skills"),
     snapshotDir: path.join(rootDir, ".snapshot"),
-    vaultDir: path.join(workspaceRoot, ".skill-test-vault"),
+    vaultDir: path.join(workspaceRoot, ".test-vault"),
   };
 }
 

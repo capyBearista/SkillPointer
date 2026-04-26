@@ -2,6 +2,7 @@ import { env, pipeline, type FeatureExtractionPipeline } from '@xenova/transform
 import type { IntelligenceProvider, ScoredTag } from './provider-interface.js';
 import type { PredictedCategory } from './types.js';
 import { TAG_DICTIONARY, type TagProviderContext, STOP_WORDS } from '../tags.js';
+import { DOMAIN_HEURISTICS } from '../categorization.js';
 
 env.allowLocalModels = true;
 
@@ -10,6 +11,7 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
   private isLoaded = false;
   private initPromise: Promise<void> | null = null;
   private staticTagsEmbedding: { tag: string; parentKey: string; vector: Float32Array }[] = [];
+  private staticCategoryEmbeddings: { category: string; vector: Float32Array }[] = [];
 
   constructor(private modelId: string = 'Snowflake/snowflake-arctic-embed-xs') {}
 
@@ -33,13 +35,53 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
       
       const staticTagsArray = Array.from(uniqueAliases.keys());
       if (staticTagsArray.length > 0) {
-        const out = await this.extractor(staticTagsArray, { pooling: 'mean', normalize: true });
+        const out = await this.extractor(staticTagsArray, { pooling: 'mean', normalize: true, truncation: true } as any);
         const dim = out.dims[1];
         const data = out.data as Float32Array;
         for (let i = 0; i < staticTagsArray.length; i++) {
           const slice = new Float32Array(data.slice(i * dim, (i + 1) * dim));
           const parentKey = uniqueAliases.get(staticTagsArray[i])!;
           this.staticTagsEmbedding.push({ tag: staticTagsArray[i], parentKey, vector: slice });
+        }
+      }
+
+      // New Category Centroid Generation
+      const categoryExemplars: Record<string, string[]> = {
+        security: ["web application security", "vulnerability scanning and penetration testing", "authentication and authorization oauth jwt"],
+        "code-review": ["automated code review", "static analysis and linting", "github pull request reviewer"],
+        git: ["version control system", "git commit branch rebase", "github repository management"],
+        "ai-ml": ["artificial intelligence and machine learning", "large language models llm", "prompt engineering and agents"],
+        "web-dev": ["frontend web development", "react angular vue ui framework", "html css javascript"],
+        "backend-dev": ["backend server development", "rest api graphql", "express django fastapi"],
+        devops: ["cloud infrastructure deployment", "docker kubernetes containerization", "continuous integration ci cd pipeline"],
+        database: ["sql and nosql databases", "relational database schema", "data storage and orm"],
+        automation: ["workflow automation scripts", "web scraping and browser automation", "bot and selenium testing"],
+        design: ["user interface ui ux design", "figma vector graphics svg", "motion animation graphics"],
+        programming: ["software engineering and data structures", "general purpose programming languages", "algorithms and performance"],
+        "mobile-dev": ["ios and android mobile app development", "react native flutter cross platform", "swift and kotlin"],
+        "data-engineering": ["data science and analytics", "machine learning data pipelines", "pandas spark big data processing"],
+        productivity: ["team collaboration and communication", "project management workflow", "knowledge base and documentation tools"]
+      };
+
+      const allExemplars: { category: string; text: string }[] = [];
+      for (const cat of Object.keys(DOMAIN_HEURISTICS)) {
+        let exemplars = categoryExemplars[cat];
+        if (!exemplars) {
+          exemplars = [`${cat} related tools`, `${cat} software engineering`, `general ${cat} domain`];
+        }
+        for (const text of exemplars) {
+          allExemplars.push({ category: cat, text });
+        }
+      }
+
+      if (allExemplars.length > 0) {
+        const out = await this.extractor(allExemplars.map(e => e.text), { pooling: 'mean', normalize: true, truncation: true } as any);
+        const dim = out.dims[1];
+        const data = out.data as Float32Array;
+        
+        for (let i = 0; i < allExemplars.length; i++) {
+          const exemplarVector = new Float32Array(data.slice(i * dim, (i + 1) * dim));
+          this.staticCategoryEmbeddings.push({ category: allExemplars[i].category, vector: exemplarVector });
         }
       }
     })();
@@ -55,12 +97,66 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
     if (!this.isReady()) await this.init();
     if (!this.extractor) throw new Error("Extractor pipeline not loaded.");
 
-    const out = await this.extractor(text, { pooling: 'mean', normalize: true });
+    const out = await this.extractor(text, { pooling: 'mean', normalize: true, truncation: true } as any);
     return Array.from(out.data as Float32Array);
   }
 
-  async predictCategory(name: string, description: string): Promise<PredictedCategory | undefined> {
-    return undefined;
+  async predictCategory(name: string, description: string, body?: string): Promise<PredictedCategory | undefined> {
+    if (!this.isReady()) await this.init();
+    if (!this.extractor) throw new Error("Extractor pipeline not loaded.");
+
+    if (this.staticCategoryEmbeddings.length === 0) return undefined;
+
+    const truncatedBody = body ? body.slice(0, 1500) : '';
+    const text = `${name}. ${name}. ${name}. ${description}. ${truncatedBody}`;
+    
+    const out = await this.extractor(text, { pooling: 'mean', normalize: true, truncation: true } as any);
+    const data = out.data as Float32Array;
+    const dim = out.dims[1];
+
+    const similarities: { name: string; confidence: number }[] = [];
+
+    for (const cat of this.staticCategoryEmbeddings) {
+      let dot = 0;
+      for (let j = 0; j < dim; j++) {
+        dot += data[j] * cat.vector[j];
+      }
+      similarities.push({ name: cat.category, confidence: dot });
+    }
+
+    similarities.sort((a, b) => b.confidence - a.confidence);
+
+    // K-Nearest Neighbors aggregation (K=5)
+    const K = 5;
+    const topK = similarities.slice(0, K);
+    
+    const categoryScores = new Map<string, { sum: number, max: number }>();
+    for (const match of topK) {
+      const current = categoryScores.get(match.name) || { sum: 0, max: -Infinity };
+      categoryScores.set(match.name, {
+        sum: current.sum + match.confidence,
+        max: Math.max(current.max, match.confidence)
+      });
+    }
+
+    const aggregatedScores = Array.from(categoryScores.entries())
+      .map(([name, stats]) => ({ name, confidence: stats.max, sum: stats.sum }))
+      .sort((a, b) => {
+        if (b.sum !== a.sum) {
+          return b.sum - a.sum;
+        }
+        // Deterministic tie-breaking
+        return a.name.localeCompare(b.name);
+      });
+
+    const top = aggregatedScores[0];
+    const alternatives = aggregatedScores.slice(1, 3).map(a => ({ name: a.name, confidence: a.confidence }));
+
+    return {
+      name: top.name,
+      confidence: top.confidence,
+      alternatives
+    };
   }
 
   async deriveTags(context: TagProviderContext): Promise<ScoredTag[]> {
@@ -72,7 +168,7 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
     const bodyText = context.body ? context.body.slice(0, 2500) : '';
     const text = `${context.name}. ${context.description}${bodyText ? `\n\n${bodyText}` : ''}`;
     
-    const docOutput = await this.extractor(text, { pooling: 'mean', normalize: true });
+    const docOutput = await this.extractor(text, { pooling: 'mean', normalize: true, truncation: true } as any);
     const docEmbedding = docOutput.data as Float32Array;
     const dim = docOutput.dims[1];
 
@@ -105,7 +201,7 @@ export class LocalIntelligenceProvider implements IntelligenceProvider {
       const BATCH_SIZE = 500;
       for (let i = 0; i < localCandidates.length; i += BATCH_SIZE) {
         const batch = localCandidates.slice(i, i + BATCH_SIZE);
-        const localOut = await this.extractor(batch, { pooling: 'mean', normalize: true });
+        const localOut = await this.extractor(batch, { pooling: 'mean', normalize: true, truncation: true } as any);
         const localData = localOut.data as Float32Array;
         for (let j = 0; j < batch.length; j++) {
           const slice = new Float32Array(localData.slice(j * dim, (j + 1) * dim));

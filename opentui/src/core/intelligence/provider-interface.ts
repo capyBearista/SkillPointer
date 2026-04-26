@@ -20,7 +20,7 @@ export interface IntelligenceProvider {
   /**
    * Predict the category for a skill based on its content
    */
-  predictCategory(name: string, description: string): Promise<PredictedCategory | undefined>;
+  predictCategory(name: string, description: string, body?: string): Promise<PredictedCategory | undefined>;
 
   /**
    * Generates an embedding vector for semantic search

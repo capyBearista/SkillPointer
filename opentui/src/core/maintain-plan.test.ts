@@ -131,7 +131,7 @@ test("applyMaintainPlan supports batch skip for destination conflicts", async ()
       },
     });
 
-    const result = await applyMaintainPlan(plan, { batchConflictAction: "skip" });
+    const result = await applyMaintainPlan(plan, { batchConflictAction: "skip", selectedMoves: new Set(plan.moveOperations.map(op => op.id)) });
 
     assert.equal(result.status, "applied");
     assert.equal(result.movedCount, 0);
@@ -229,12 +229,106 @@ test("applyMaintainPlan abort policy exits before mutation when conflicts exist"
       },
     });
 
-    const result = await applyMaintainPlan(plan, { batchConflictAction: "abort" });
+    const result = await applyMaintainPlan(plan, { batchConflictAction: "abort", selectedMoves: new Set(plan.moveOperations.map(op => op.id)) });
     assert.equal(result.status, "aborted");
     assert.equal(result.movedCount, 0);
     assert.equal(result.pointerCount, 0);
 
     assert.ok(fs.existsSync(path.join(fixture.profile.vaultDir, "misc", "security-helper")));
+  } finally {
+    destroyFixture(fixture.root);
+  }
+});
+
+import crypto from "node:crypto";
+
+function computeHash(content: string) {
+  return crypto.createHash("sha256").update(content).digest("hex");
+}
+
+test("buildMaintainPlan semantic override logic", async (t) => {
+  const fixture = createFixture();
+  try {
+    const unknownSkill = path.join(fixture.profile.vaultDir, "misc", "unknown-tool");
+    fs.mkdirSync(unknownSkill, { recursive: true });
+    fs.writeFileSync(path.join(unknownSkill, "SKILL.md"), "---\nname: unknown-tool\n---\n");
+
+    const authContent = "---\nname: auth-hardening\n---\n";
+    const authDesc = "No description provided.";
+    const authContentHash = computeHash(authContent);
+    const authDescHash = computeHash(authDesc);
+
+    const unkContent = "---\nname: unknown-tool\n---\n";
+    const unkDesc = "No description provided.";
+    const unkContentHash = computeHash(unkContent);
+    const unkDescHash = computeHash(unkDesc);
+
+    const writeIndex = (authConf: number, authAltConf: number, unkConf: number) => {
+      const indexData = {
+        version: 1,
+        model: { id: "test", revision: "1", dim: 0 },
+        updatedAt: new Date().toISOString(),
+        skills: {
+          "auth-hardening": {
+            name: "auth-hardening",
+            descriptionHash: authDescHash,
+            contentHash: authContentHash,
+            tags: [],
+            predictedCategory: {
+              name: "ai-ml",
+              confidence: authConf,
+              alternatives: [{ name: "web-dev", confidence: authAltConf }],
+            },
+            lastComputedAt: new Date().toISOString(),
+            source: { provider: "local-ml", fallbackUsed: false }
+          },
+          "unknown-tool": {
+            name: "unknown-tool",
+            descriptionHash: unkDescHash,
+            contentHash: unkContentHash,
+            tags: [],
+            predictedCategory: {
+              name: "ai-ml",
+              confidence: unkConf,
+              alternatives: [],
+            },
+            lastComputedAt: new Date().toISOString(),
+            source: { provider: "local-ml", fallbackUsed: false }
+          }
+        }
+      };
+      fs.writeFileSync(path.join(fixture.profile.vaultDir, ".skillcat-index.json"), JSON.stringify(indexData));
+    };
+
+    // Test 1: 0.75 vs 0.70 (margin 0.05) -> FAILS
+    writeIndex(0.75, 0.70, 0.0);
+    let plan = await buildMaintainPlan({
+      profiles: [fixture.profile],
+      actions: { recategorize: true, regeneratePointers: false },
+    });
+    let move = plan.moveOperations.find(m => m.skillName === "auth-hardening");
+    assert.equal(move, undefined);
+
+    // Test 2: 0.75 vs 0.60 (margin 0.15) -> PASSES
+    writeIndex(0.75, 0.60, 0.0);
+    plan = await buildMaintainPlan({
+      profiles: [fixture.profile],
+      actions: { recategorize: true, regeneratePointers: false },
+    });
+    move = plan.moveOperations.find(m => m.skillName === "auth-hardening");
+    assert.equal(move?.toCategory, "ai-ml");
+    assert.equal(move?.isSemanticOverride, true);
+
+    // Test 3: 0.65 on _uncategorized -> PASSES
+    writeIndex(0.0, 0.0, 0.65);
+    plan = await buildMaintainPlan({
+      profiles: [fixture.profile],
+      actions: { recategorize: true, regeneratePointers: false },
+    });
+    move = plan.moveOperations.find(m => m.skillName === "unknown-tool");
+    assert.equal(move?.toCategory, "ai-ml");
+    assert.equal(move?.isSemanticOverride, true);
+
   } finally {
     destroyFixture(fixture.root);
   }
@@ -254,7 +348,7 @@ test("applyMaintainPlan removes stale pointer folders during regeneration", asyn
         regeneratePointers: true,
       },
     });
-    const result = await applyMaintainPlan(plan, { batchConflictAction: "skip" });
+    const result = await applyMaintainPlan(plan, { batchConflictAction: "skip", selectedMoves: new Set(plan.moveOperations.map(op => op.id)) });
 
     assert.equal(result.status, "applied");
     assert.ok(!fs.existsSync(stalePointerDir));

@@ -16,6 +16,7 @@ export type InitRouteProps = {
   duplicateChoiceCursor: number;
   initPlan: InitPlan | null;
   batchAction: PlanConflictAction;
+  pointerMode: string;
   initPreviewLines: string[];
   initResult: string[];
   toRelativePath: (value: string) => string;
@@ -36,6 +37,7 @@ export function InitRoute({
   duplicateChoiceCursor,
   initPlan,
   batchAction,
+  pointerMode,
   initPreviewLines,
   initResult,
   toRelativePath,
@@ -88,6 +90,9 @@ export function InitRoute({
               will require conflict resolution.
             </text>
           ) : null}
+          <text fg={theme.tokens.textMuted}>
+            Pointer Mode: <span fg={theme.tokens.accentStrong}>{pointerMode}</span> (Use Left/Right to change)
+          </text>
           <text fg={theme.tokens.textMuted}>
             Tip: keep one path selected for the simplest first run.
           </text>

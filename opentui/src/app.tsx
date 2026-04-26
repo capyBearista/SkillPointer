@@ -24,6 +24,7 @@ import {
   type InitPlan,
   type PlanConflictAction,
 } from "./core/init-plan";
+import { type PointerMode } from "./core/pointer-template";
 import {
   applyMaintainPlan,
   buildMaintainPlan,
@@ -77,7 +78,7 @@ type PresetSaveMode = (typeof PRESET_SAVE_MODES)[number];
 const STATS_RESET_PHRASE = "RESET STATS";
 
 const HEADER_LINE_COUNT = 4;
-const MAINTAIN_ACTION_COUNT = 6;
+const MAINTAIN_ACTION_COUNT = 7;
 
 type AppProps = {
   startRoute: RouteName;
@@ -238,6 +239,7 @@ export function App({ startRoute, onExit }: AppProps) {
   const [duplicateCursor, setDuplicateCursor] = useState(0);
   const [duplicateChoiceCursor, setDuplicateChoiceCursor] = useState(0);
   const [batchAction, setBatchAction] = useState<PlanConflictAction>("skip");
+  const [pointerMode, setPointerMode] = useState<PointerMode>("both");
 
   const [browseCategoryCursor, setBrowseCategoryCursor] = useState(0);
   const [browseSkillCursor, setBrowseSkillCursor] = useState(0);
@@ -253,6 +255,8 @@ export function App({ startRoute, onExit }: AppProps) {
   const [maintainPlan, setMaintainPlan] = useState<MaintainPlan | null>(null);
   const [maintainResult, setMaintainResult] = useState<string[]>([]);
   const [maintainPreviewLines, setMaintainPreviewLines] = useState<string[]>([]);
+  const [maintainSelectedMoves, setMaintainSelectedMoves] = useState<Set<string>>(new Set());
+  const [maintainMoveCursor, setMaintainMoveCursor] = useState(0);
   const [presetFlowVisible, setPresetFlowVisible] = useState(false);
   const [presetFlowSource, setPresetFlowSource] = useState<"init" | "maintain" | null>(null);
   const [presetFlowCandidates, setPresetFlowCandidates] = useState<PresetCandidate[]>([]);
@@ -456,7 +460,7 @@ export function App({ startRoute, onExit }: AppProps) {
 
     try {
       const currentPlan = initPlan;
-      const result = await applyInitPlan(initPlan, { batchConflictAction: batchAction });
+      const result = await applyInitPlan(initPlan, { batchConflictAction: batchAction, pointerMode });
       if (result.status === "aborted") {
         setInitResult([
           "Init apply aborted by selected conflict policy.",
@@ -503,6 +507,8 @@ export function App({ startRoute, onExit }: AppProps) {
     });
     setMaintainPlan(nextPlan);
     setMaintainPreviewLines(buildMaintainPreviewLines(nextPlan));
+    setMaintainSelectedMoves(new Set(nextPlan.moveOperations.map((op) => op.id)));
+    setMaintainMoveCursor(0);
   };
 
   const executeMaintainApply = async () => {
@@ -515,6 +521,8 @@ export function App({ startRoute, onExit }: AppProps) {
       const currentPlan = maintainPlan;
       const result = await applyMaintainPlan(maintainPlan, {
         batchConflictAction: maintainBatchAction,
+        selectedMoves: maintainSelectedMoves,
+        pointerMode,
       });
       if (result.status === "aborted") {
         setMaintainResult([
@@ -695,6 +703,24 @@ export function App({ startRoute, onExit }: AppProps) {
           return;
         }
 
+        if (key.name === "left") {
+          setPointerMode((previous) => {
+            const order: PointerMode[] = ["both", "tags", "categories"];
+            const index = order.indexOf(previous);
+            return order[(index - 1 + order.length) % order.length];
+          });
+          return;
+        }
+
+        if (key.name === "right") {
+          setPointerMode((previous) => {
+            const order: PointerMode[] = ["both", "tags", "categories"];
+            const index = order.indexOf(previous);
+            return order[(index + 1) % order.length];
+          });
+          return;
+        }
+
         if (isEnterKey(key.name)) {
           const transition = await onInitSelectPathsEnter(profiles, pathSelection);
           setInitStep(transition.nextStep);
@@ -824,13 +850,39 @@ export function App({ startRoute, onExit }: AppProps) {
     }
 
     if (activeRoute === "maintain") {
+      if (maintainPlan && maintainPlan.moveOperations.length > 0 && maintainCursor === MAINTAIN_ACTION_COUNT) {
+        if (key.name === "up") {
+          if (maintainMoveCursor > 0) {
+            setMaintainMoveCursor((c) => c - 1);
+          } else {
+            setMaintainCursor(MAINTAIN_ACTION_COUNT - 1);
+          }
+          return;
+        }
+        if (key.name === "down") {
+          setMaintainMoveCursor((c) => Math.min(maintainPlan.moveOperations.length - 1, c + 1));
+          return;
+        }
+        if (key.name === "space" || key.name === " ") {
+          const opId = maintainPlan.moveOperations[maintainMoveCursor].id;
+          setMaintainSelectedMoves((prev) => {
+            const next = new Set(prev);
+            if (next.has(opId)) next.delete(opId);
+            else next.add(opId);
+            return next;
+          });
+          return;
+        }
+      }
+
       if (key.name === "up") {
         setMaintainCursor((cursor) => Math.max(0, cursor - 1));
         return;
       }
 
       if (key.name === "down") {
-        setMaintainCursor((cursor) => Math.min(MAINTAIN_ACTION_COUNT - 1, cursor + 1));
+        const maxCursor = maintainPlan && maintainPlan.moveOperations.length > 0 ? MAINTAIN_ACTION_COUNT : MAINTAIN_ACTION_COUNT - 1;
+        setMaintainCursor((cursor) => Math.min(maxCursor, cursor + 1));
         return;
       }
 
@@ -858,6 +910,30 @@ export function App({ startRoute, onExit }: AppProps) {
         }
 
       if (key.name === "left" && maintainCursor === 2) {
+        setPointerMode((previous) => {
+          const order: PointerMode[] = ["both", "tags", "categories"];
+          const index = order.indexOf(previous);
+          return order[(index - 1 + order.length) % order.length];
+        });
+        setMaintainPlan(null);
+        setMaintainPreviewLines([]);
+        setMaintainResult([]);
+        return;
+      }
+
+      if (key.name === "right" && maintainCursor === 2) {
+        setPointerMode((previous) => {
+          const order: PointerMode[] = ["both", "tags", "categories"];
+          const index = order.indexOf(previous);
+          return order[(index + 1) % order.length];
+        });
+        setMaintainPlan(null);
+        setMaintainPreviewLines([]);
+        setMaintainResult([]);
+        return;
+      }
+
+      if (key.name === "left" && maintainCursor === 3) {
         setMaintainBatchAction((previous) => {
           const order: MaintainConflictAction[] = ["skip", "overwrite", "abort"];
           const index = order.indexOf(previous);
@@ -869,7 +945,7 @@ export function App({ startRoute, onExit }: AppProps) {
         return;
       }
 
-      if (key.name === "right" && maintainCursor === 2) {
+      if (key.name === "right" && maintainCursor === 3) {
         setMaintainBatchAction((previous) => {
           const order: MaintainConflictAction[] = ["skip", "overwrite", "abort"];
           const index = order.indexOf(previous);
@@ -882,17 +958,17 @@ export function App({ startRoute, onExit }: AppProps) {
       }
 
       if (isEnterKey(key.name)) {
-        if (maintainCursor === 3) {
+        if (maintainCursor === 4) {
           await buildMaintainPreview();
           return;
         }
 
-        if (maintainCursor === 4) {
+        if (maintainCursor === 5) {
           await executeMaintainApply();
           return;
         }
 
-        if (maintainCursor === 5) {
+        if (maintainCursor === 6) {
           handleSandboxReset();
           setMaintainResult([
             "Local sandbox restored from snapshot.",
@@ -1217,6 +1293,7 @@ export function App({ startRoute, onExit }: AppProps) {
                     duplicateChoiceCursor={duplicateChoiceCursor}
                     initPlan={initPlan}
                     batchAction={batchAction}
+                    pointerMode={pointerMode}
                     initPreviewLines={initPreviewLines}
                     initResult={initResult}
                     toRelativePath={toRelativePath}
@@ -1245,11 +1322,14 @@ export function App({ startRoute, onExit }: AppProps) {
                     theme={theme}
                     maintainCursor={maintainCursor}
                     maintainActions={maintainActions}
+                    pointerMode={pointerMode}
                     maintainBatchAction={maintainBatchAction}
                     maintainPlan={maintainPlan}
                     maintainPreviewLines={maintainPreviewLines}
                     maintainResult={maintainResult}
                     sandboxStatus={sandboxStatus}
+                    maintainSelectedMoves={maintainSelectedMoves}
+                    maintainMoveCursor={maintainMoveCursor}
                     formatMaintainAction={formatMaintainAction}
                     renderPreviewCard={renderPreviewCard}
                   />

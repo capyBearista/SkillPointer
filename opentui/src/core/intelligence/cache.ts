@@ -5,8 +5,19 @@ import { IntelligenceIndex, IntelligenceMetadata } from "./types.js";
 import { ScoredTag } from "./provider-interface.js";
 import { deriveTagsAsync } from "../tags.js";
 import { getIntelligenceProvider } from "./runtime.js";
+import { Mutex } from "./mutex.js";
 
 const INDEX_FILENAME = ".skillcat-index.json";
+const vaultMutexes = new Map<string, Mutex>();
+
+function getVaultMutex(vaultPath: string): Mutex {
+  let mutex = vaultMutexes.get(vaultPath);
+  if (!mutex) {
+    mutex = new Mutex();
+    vaultMutexes.set(vaultPath, mutex);
+  }
+  return mutex;
+}
 
 export async function readIntelligenceIndex(vaultPath: string): Promise<IntelligenceIndex | null> {
   const indexPath = path.join(vaultPath, INDEX_FILENAME);
@@ -58,18 +69,18 @@ export async function getOrComputeIntelligence(
   // Need to compute
   const provider = getIntelligenceProvider();
   
-  const tags = await deriveTagsAsync(skillName, description, {
+  const tagsPromise = deriveTagsAsync(skillName, description, {
     maxTags: 10,
+    body: content,
     provider: provider ? async (ctx) => {
       const { nlpDeriveTags } = await import("./tagger.js");
-      return await nlpDeriveTags(provider, ctx.name, ctx.description, { maxTags: ctx.maxTags, minConfidence: 0.65 });
+      return await nlpDeriveTags(provider, ctx.name, ctx.description, { maxTags: ctx.maxTags, minConfidence: 0.65, body: ctx.body });
     } : undefined
   });
   
-  let category;
-  if (provider) {
-    category = await provider.predictCategory(skillName, description);
-  }
+  const categoryPromise = provider ? provider.predictCategory(skillName, description, content) : Promise.resolve(undefined);
+
+  const [tags, category] = await Promise.all([tagsPromise, categoryPromise]);
   
   const metadata: IntelligenceMetadata = {
     name: skillName,
@@ -84,9 +95,23 @@ export async function getOrComputeIntelligence(
     }
   };
   
-  index.skills[skillName] = metadata;
-  index.updatedAt = new Date().toISOString();
-  await writeIntelligenceIndex(vaultPath, index);
+  const release = await getVaultMutex(vaultPath).acquire();
+  try {
+    let latestIndex = await readIntelligenceIndex(vaultPath);
+    if (!latestIndex) {
+      latestIndex = {
+        version: 1,
+        model: { id: "default", revision: "1", dim: 0 },
+        updatedAt: new Date().toISOString(),
+        skills: {}
+      };
+    }
+    latestIndex.skills[skillName] = metadata;
+    latestIndex.updatedAt = new Date().toISOString();
+    await writeIntelligenceIndex(vaultPath, latestIndex);
+  } finally {
+    release();
+  }
   
   return metadata;
 }

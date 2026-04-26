@@ -529,8 +529,8 @@ def migrate_skills():
         if not folder.is_dir():
             continue
 
-        # Ignore existing pointers
-        if folder.name.endswith("-category-pointer"):
+        # Ignore existing pointers and the legacy skills-index folder
+        if folder.name.endswith("-category-pointer") or folder.name == "skills-index":
             continue
 
         # Ignore empty folders
@@ -567,7 +567,7 @@ def migrate_skills():
     return category_counts
 
 
-def generate_pointers():
+def generate_pointers(pointer_mode: str = "both"):
     active_skills_dir = CONFIG["active_skills_dir"]
     hidden_library_dir = CONFIG["hidden_library_dir"]
 
@@ -648,8 +648,15 @@ This library contains {count} specialized skills covering various aspects of {ca
         skills_index_lines = []
         for skill_path in sorted(skill_files):
             s_name, s_desc, s_tags = parse_skill_metadata(skill_path)
-            tags_str = f" [{', '.join(s_tags)}]" if s_tags else ""
-            desc_str = f"\n  *{s_desc}*" if s_desc else ""
+            
+            tags_str = ""
+            if pointer_mode in ["tags", "both"] and s_tags:
+                tags_str = f" [{', '.join(s_tags)}]"
+                
+            desc_str = ""
+            if pointer_mode in ["categories", "both"] and s_desc:
+                desc_str = f"\n  *{s_desc}*"
+                
             normalized_path = str(skill_path.parent.absolute()).replace("\\", "/")
             home_dir = str(Path.home()).replace("\\", "/")
             if normalized_path.startswith(home_dir):
@@ -683,49 +690,32 @@ This library contains {count} specialized skills covering various aspects of {ca
             f"{Colors.CYAN}  ⊕ Created {pointer_name} ➔ Indexes {count} skills.{Colors.ENDC}"
         )
 
-    # Generate the global skills-index for "Tags Only" mode
+    # Generate the minimal skills-manifest.json
     if all_global_skills:
-        global_index_dir = active_skills_dir / "skills-index"
-        global_index_dir.mkdir(parents=True, exist_ok=True)
+        manifest_path = active_skills_dir / "skills-manifest.json"
         
         # Sort globally by name
         all_global_skills.sort(key=lambda s: s["name"])
         
-        global_index_lines = []
-        for s in all_global_skills:
-            tags_str = f" [{', '.join(s['tags'])}]" if s['tags'] else ""
-            global_index_lines.append(f"- **{s['name']}**{tags_str}: {s['path']}")
-            
-        global_index_content = f"""---
-name: skills-index
-description: A global semantic index of all hidden skills available. Use this to find the best skill for a task based on tags.
----
-
-# Global Skills Index 🌐
-
-You have access to a massive hidden library of {total_skills_indexed} specialized skills. This index allows you to find the exact skill you need based on semantic tags.
-
-## Instructions
-1. Search this index to find skills whose tags best match the user's request.
-2. Read the specific Markdown files at the provided absolute paths.
-3. Do NOT guess paths. Always use the paths exactly as provided below.
-
-## Index
-{chr(10).join(global_index_lines)}
-"""
-        with open(global_index_dir / "SKILL.md", "w", encoding="utf-8") as f:
-            f.write(global_index_content)
+        import json
+        manifest_content = {
+            "totalSkills": total_skills_indexed,
+            "skills": all_global_skills
+        }
+        
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(manifest_content, f, indent=2)
         
         print(
-            f"{Colors.CYAN}  ⊕ Created skills-index ➔ Global semantic index of {total_skills_indexed} skills.{Colors.ENDC}"
+            f"{Colors.CYAN}  ⊕ Created skills-manifest.json ➔ Minimal metadata index for {total_skills_indexed} skills.{Colors.ENDC}"
         )
 
     print(
-        f"\n{Colors.BLUE}✔ Successfully generated {created_pointers} ultra-lightweight pointers and 1 global index for {total_skills_indexed} total skills.{Colors.ENDC}"
+        f"\n{Colors.BLUE}✔ Successfully generated {created_pointers} lightweight pointers and 1 manifest for {total_skills_indexed} total skills.{Colors.ENDC}"
     )
 
 
-def run_setup(agent: str = "opencode") -> None:
+def run_setup(agent: str = "opencode", pointer_mode: str = "both") -> None:
     if agent == "claude":
         CONFIG["agent_name"] = "Claude Code"
         CONFIG["active_skills_dir"] = Path.home() / ".claude" / "skills"
@@ -742,7 +732,7 @@ def run_setup(agent: str = "opencode") -> None:
     time.sleep(1)
     migrate_skills()
     time.sleep(1)
-    generate_pointers()
+    generate_pointers(pointer_mode)
 
     print(
         f"\n{Colors.BOLD}{Colors.GREEN}=========================================={Colors.ENDC}"
@@ -766,12 +756,14 @@ def main():
     )
     parser.add_argument("--agent", choices=["opencode", "claude"], default="opencode", 
                         help="Target AI agent (opencode or claude)")
+    parser.add_argument("--pointer-mode", choices=["categories", "tags", "both"], default="both",
+                        help="Formatting mode for skill pointers (categories=desc only, tags=tags only, both=both).")
     args, unknown = parser.parse_known_args()
 
     # Handle 'install' argument for compatibility with Install.bat/vbs
     if unknown and unknown[0] == "install":
         pass
-    run_setup(args.agent)
+    run_setup(args.agent, args.pointer_mode)
 
 
 if __name__ == "__main__":

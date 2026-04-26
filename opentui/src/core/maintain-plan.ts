@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { getCategoryForSkill } from "./categorization";
 import { getOrComputeIntelligence } from "./intelligence/cache.js";
-import { buildPointerContent, buildGlobalIndexContent } from "./pointer-template";
-import { readSkillDescription } from "./browse-data";
+import { buildPointerContent, type PointerMode } from "./pointer-template";
+import { parseSkillDescriptionFromContent } from "./browse-data";
 import { deriveTagsWithOptions } from "./tags";
 import type { PathProfile } from "./path-profiles";
 
@@ -19,6 +19,9 @@ export type MaintainMoveOperation = {
   skillName: string;
   fromCategory: string;
   toCategory: string;
+  confidenceScore?: number;
+  margin?: number;
+  isSemanticOverride: boolean;
 };
 
 export type MaintainPointerOperation = {
@@ -60,6 +63,8 @@ export type BuildMaintainPlanOptions = {
 
 export type ApplyMaintainPlanOptions = {
   batchConflictAction: MaintainConflictAction;
+  selectedMoves: Set<string>;
+  pointerMode?: PointerMode;
 };
 
 export type ApplyMaintainPlanResult = {
@@ -172,8 +177,8 @@ async function buildPointerOperations(
         const skillPath = path.join(profile.vaultDir, categoryName, skillName);
         const skillFile = path.join(skillPath, "SKILL.md");
         const hasFile = await access(skillFile).then(() => true).catch(() => false);
-        const description = hasFile ? readSkillDescription(skillFile) : "No description provided.";
         const content = hasFile ? await readFile(skillFile, "utf-8") : "";
+        const description = hasFile ? parseSkillDescriptionFromContent(content) : "No description provided.";
         
         const meta = await getOrComputeIntelligence(profile.vaultDir, skillName, description, content);
         const tags = meta.tags;
@@ -202,12 +207,12 @@ async function buildPointerOperations(
   return pointerOperations;
 }
 
-function buildRecategorizeOperations(
+async function buildRecategorizeOperations(
   profiles: PathProfile[],
-): {
+): Promise<{
   moveOperations: MaintainMoveOperation[];
   conflicts: MaintainConflict[];
-} {
+}> {
   const moveOperations: MaintainMoveOperation[] = [];
   const conflicts: MaintainConflict[] = [];
   const visitedVaults = new Set<string>();
@@ -225,7 +230,37 @@ function buildRecategorizeOperations(
         continue;
       }
 
-      const targetCategory = getCategoryForSkill(entry.skillName);
+      const skillFile = path.join(entry.skillPath, "SKILL.md");
+      const hasFile = await access(skillFile).then(() => true).catch(() => false);
+      const content = hasFile ? await readFile(skillFile, "utf-8") : "";
+      const description = hasFile ? parseSkillDescriptionFromContent(content) : "No description provided.";
+
+      let targetCategory = getCategoryForSkill(entry.skillName);
+      let isSemanticOverride = false;
+      let confidenceScore: number | undefined = undefined;
+      let margin: number | undefined = undefined;
+
+      const meta = await getOrComputeIntelligence(profile.vaultDir, entry.skillName, description, content);
+      if (meta.predictedCategory) {
+        const top1 = meta.predictedCategory;
+        const top2 = top1.alternatives && top1.alternatives.length > 0 ? top1.alternatives[0] : undefined;
+        
+        const top1Confidence = top1.confidence;
+        const top2Confidence = top2 ? top2.confidence : 0;
+        const calcMargin = top1Confidence - top2Confidence;
+
+        const conditionA = targetCategory === "_uncategorized" && top1Confidence > 0.60;
+        const conditionB = top1Confidence > 0.70 && calcMargin > 0.08;
+
+        if (conditionA || conditionB) {
+          targetCategory = top1.name;
+          isSemanticOverride = true;
+        }
+        
+        confidenceScore = top1Confidence;
+        margin = calcMargin;
+      }
+
       if (entry.category === targetCategory) {
         continue;
       }
@@ -240,6 +275,9 @@ function buildRecategorizeOperations(
         skillName: entry.skillName,
         fromCategory: entry.category,
         toCategory: targetCategory,
+        isSemanticOverride,
+        confidenceScore,
+        margin,
       });
 
       if (fs.existsSync(destinationPath)) {
@@ -266,7 +304,7 @@ export async function buildMaintainPlan(options: BuildMaintainPlanOptions): Prom
   let conflicts: MaintainConflict[] = [];
 
   if (actions.recategorize) {
-    const recategorize = buildRecategorizeOperations(profiles);
+    const recategorize = await buildRecategorizeOperations(profiles);
     moveOperations = recategorize.moveOperations;
     conflicts = recategorize.conflicts;
   }
@@ -308,7 +346,7 @@ function shouldSkipMove(
   return false;
 }
 
-function applyPointers(pointerOperations: MaintainPointerOperation[]): number {
+function applyPointers(pointerOperations: MaintainPointerOperation[], pointerMode?: PointerMode): number {
   let pointerCount = 0;
   
   const skillsByActiveDir = new Map<string, { totalSkills: number; skills: { name: string; path: string; tags: string[] }[] }>();
@@ -321,6 +359,7 @@ function applyPointers(pointerOperations: MaintainPointerOperation[]): number {
       count: pointer.count,
       libraryPath: pointer.libraryPath,
       skills: pointer.skills,
+      displayMode: pointerMode,
     });
     fs.writeFileSync(pointer.pointerPath, content, "utf-8");
     pointerCount += 1;
@@ -337,16 +376,20 @@ function applyPointers(pointerOperations: MaintainPointerOperation[]): number {
 
   for (const [activeDir, data] of skillsByActiveDir.entries()) {
     const globalIndexPath = path.join(activeDir, "skills-index", "SKILL.md");
-    if (data.totalSkills > 0) {
-      fs.mkdirSync(path.dirname(globalIndexPath), { recursive: true });
-      const content = buildGlobalIndexContent({
-        totalSkills: data.totalSkills,
-        skills: data.skills,
-      });
-      fs.writeFileSync(globalIndexPath, content, "utf-8");
-      pointerCount += 1;
-    } else if (fs.existsSync(globalIndexPath)) {
+    if (fs.existsSync(globalIndexPath)) {
       fs.rmSync(path.join(activeDir, "skills-index"), { recursive: true, force: true });
+    }
+
+    const manifestPath = path.join(activeDir, "skills-manifest.json");
+    if (data.totalSkills > 0) {
+      fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+      const manifestContent = {
+        totalSkills: data.totalSkills,
+        skills: data.skills.map(s => ({ name: s.name, path: s.path, tags: s.tags })),
+      };
+      fs.writeFileSync(manifestPath, JSON.stringify(manifestContent, null, 2), "utf-8");
+    } else if (fs.existsSync(manifestPath)) {
+      fs.rmSync(manifestPath, { force: true });
     }
   }
 
@@ -406,6 +449,11 @@ export async function applyMaintainPlan(
   let skippedCount = 0;
 
   for (const move of plan.moveOperations) {
+    if (!options.selectedMoves.has(move.id)) {
+      skippedCount += 1;
+      continue;
+    }
+
     const skip = shouldSkipMove(move, plan.conflicts, options.batchConflictAction);
     if (skip) {
       skippedCount += 1;
@@ -430,7 +478,7 @@ export async function applyMaintainPlan(
     ? await buildPointerOperations(plan.profiles, [])
     : [];
   cleanupStalePointers(plan.profiles, updatedPointerOperations);
-  const pointerCount = applyPointers(updatedPointerOperations);
+  const pointerCount = applyPointers(updatedPointerOperations, options.pointerMode);
 
   return {
     status: "applied",

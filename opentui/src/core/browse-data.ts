@@ -26,8 +26,7 @@ function toCategoryLabel(name: string): string {
   return name.replace(/-/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-export function readSkillDescription(skillFilePath: string): string {
-  const content = fs.readFileSync(skillFilePath, "utf-8");
+export function parseSkillDescriptionFromContent(content: string): string {
   const line = content
     .split("\n")
     .find((entry) => entry.trim().toLowerCase().startsWith("description:"));
@@ -37,6 +36,11 @@ export function readSkillDescription(skillFilePath: string): string {
   }
 
   return line.split(":").slice(1).join(":").trim() || "No description provided.";
+}
+
+export function readSkillDescription(skillFilePath: string): string {
+  const content = fs.readFileSync(skillFilePath, "utf-8");
+  return parseSkillDescriptionFromContent(content);
 }
 
 function buildCategory(profile: PathProfile, categoryName: string): BrowseCategory | null {

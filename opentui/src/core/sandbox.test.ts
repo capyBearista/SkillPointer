@@ -49,6 +49,6 @@ test("resetSandboxEnvironment restores skills and clears vault", () => {
 test("getSandboxPaths uses project-relative directories", () => {
   const root = "/tmp/skillcat-project";
   const paths = getSandboxPaths(root);
-  assert.equal(paths.skillsDir, path.join(root, ".skill-test", "skills"));
-  assert.equal(paths.vaultDir, path.join(root, ".skill-test-vault"));
+  assert.equal(paths.skillsDir, path.join(root, ".test", "skills"));
+  assert.equal(paths.vaultDir, path.join(root, ".test-vault"));
 });
